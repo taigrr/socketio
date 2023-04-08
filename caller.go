@@ -64,7 +64,7 @@ func (c *caller) Call(so Socket, args []interface{}) []reflect.Value {
 
 	// Issue 95 from original.
 	if len(args) != len(c.Args) {
-		return []reflect.Value{reflect.ValueOf([]interface{}{}), reflect.ValueOf(errors.New("Arguments do not match"))}
+		return []reflect.Value{reflect.ValueOf([]interface{}{}), reflect.ValueOf(errors.New("arguments do not match"))}
 	}
 
 	for i, arg := range args {

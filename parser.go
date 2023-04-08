@@ -192,7 +192,8 @@ func (d *decoder) Decode(v *packet) error {
 	v.Type = packetType(t - '0')
 
 	if v.Type == BinaryEvent || v.Type == BinaryAck {
-		num, err := reader.ReadBytes('-')
+		var num []byte
+		num, err = reader.ReadBytes('-')
 		if err != nil {
 			return err
 		}
@@ -200,7 +201,8 @@ func (d *decoder) Decode(v *packet) error {
 		if numLen == 0 {
 			return fmt.Errorf("invalid packet")
 		}
-		n, err := strconv.ParseInt(string(num[:numLen-1]), 10, 64)
+		var n int64
+		n, err = strconv.ParseInt(string(num[:numLen-1]), 10, 64)
 		if err != nil {
 			return fmt.Errorf("invalid packet")
 		}

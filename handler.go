@@ -129,7 +129,7 @@ func (h *socketHandler) Emit(message string, args ...interface{}) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	if c != nil {
-		id, err := h.socket.sendId(args)
+		id, err := h.socket.sendID(args)
 		if err != nil {
 			return err
 		}

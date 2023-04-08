@@ -4,7 +4,6 @@ import "sync"
 
 // BroadcastAdaptor is the adaptor to handle broadcast.
 type BroadcastAdaptor interface {
-
 	// Join lets socket join the t room.
 	Join(room string, socket Socket) error
 
@@ -80,7 +79,7 @@ func (b *broadcast) NumberInRoom(room string) (rv int, err error) {
 	defer b.broadcastLock.RUnlock()
 	sockets := b.roomSet[room]
 	rv = 0
-	for _, _ = range sockets {
+	for range sockets {
 		rv++
 	}
 	return
@@ -91,7 +90,7 @@ func (b *broadcast) NumberOfRooms(room string) (rv int, err error) {
 	b.broadcastLock.RLock()
 	defer b.broadcastLock.RUnlock()
 	rv = 0
-	for _, _ = range b.roomSet {
+	for range b.roomSet {
 		rv++
 	}
 	return

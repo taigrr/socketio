@@ -54,28 +54,28 @@ func (s *socket) Emit(message string, args ...interface{}) error {
 }
 
 func (s *socket) send(args []interface{}) error {
-	packet := packet{
+	p := packet{
 		Type: Event,
 		ID:   -1,
 		NSP:  s.namespace,
 		Data: args,
 	}
 	encoder := newEncoder(s.conn)
-	return encoder.Encode(packet)
+	return encoder.Encode(p)
 }
 
 func (s *socket) sendConnect() error {
-	packet := packet{
+	p := packet{
 		Type: Connect,
 		ID:   -1,
 		NSP:  s.namespace,
 	}
 	encoder := newEncoder(s.conn)
-	return encoder.Encode(packet)
+	return encoder.Encode(p)
 }
 
-func (s *socket) sendId(args []interface{}) (int, error) {
-	packet := packet{
+func (s *socket) sendID(args []interface{}) (int, error) {
+	p := packet{
 		Type: Event,
 		ID:   s.id,
 		NSP:  s.namespace,
@@ -86,11 +86,11 @@ func (s *socket) sendId(args []interface{}) (int, error) {
 		s.id = 0
 	}
 	encoder := newEncoder(s.conn)
-	err := encoder.Encode(packet)
+	err := encoder.Encode(p)
 	if err != nil {
 		return -1, nil
 	}
-	return packet.ID, nil
+	return p.ID, nil
 }
 
 func (s *socket) loop() error {
@@ -100,7 +100,7 @@ func (s *socket) loop() error {
 			Type: Disconnect,
 			ID:   -1,
 		}
-		s.socketHandler.onPacket(nil, &p)
+		s.onPacket(nil, &p)
 	}()
 
 	p := packet{
@@ -111,14 +111,14 @@ func (s *socket) loop() error {
 	if err := encoder.Encode(p); err != nil {
 		return err
 	}
-	s.socketHandler.onPacket(nil, &p)
+	s.onPacket(nil, &p)
 	for {
 		decoder := newDecoder(s.conn)
 		var p packet
 		if err := decoder.Decode(&p); err != nil {
 			return err
 		}
-		ret, err := s.socketHandler.onPacket(decoder, &p)
+		ret, err := s.onPacket(decoder, &p)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func (s *socket) loop() error {
 			fallthrough
 		case Event:
 			if p.ID >= 0 {
-				p := packet{
+				p = packet{
 					Type: Ack,
 					ID:   p.ID,
 					NSP:  s.namespace,

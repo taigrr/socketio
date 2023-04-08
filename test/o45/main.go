@@ -19,8 +19,10 @@ import (
 	"github.com/pschlump/socketio"
 )
 
-var port string = "9000"
-var host_ip string = ""
+var (
+	port   string = "9000"
+	hostIP string = ""
+)
 
 var opts struct {
 	Port   int    `short:"P" long:"port"     description:"Port to listen to"                     default:"9000"`
@@ -28,7 +30,6 @@ var opts struct {
 }
 
 func main() {
-
 	junk, err := flags.ParseArgs(&opts, os.Args)
 
 	if len(junk) != 1 {
@@ -41,7 +42,7 @@ func main() {
 
 	port = fmt.Sprintf("%d", opts.Port)
 	if opts.HostIP != "localhost" {
-		host_ip = opts.HostIP
+		hostIP = opts.HostIP
 	}
 
 	server, err := socketio.NewServer(nil)
@@ -54,20 +55,19 @@ func main() {
 		so.On("chat message", func(msg string) {
 			m := make(map[string]interface{})
 			m["a"] = "你好" // hello there
-			e := so.Emit("cn1111", m)
-			//这个没有问题			// this is no problem
-			fmt.Println("\n\n")
+			so.Emit("cn1111", m)
+			// 这个没有问题			// this is no problem
 
 			b := make(map[string]string)
-			b["u-a"] = "中文内容" //这个不能是中文		// this is chineese // this can not be chineese
+			b["u-a"] = "中文内容" // 这个不能是中文		// this is chineese // this can not be chineese
 			m["b-c"] = b
-			e = so.Emit("cn2222", m)
+			e := so.Emit("cn2222", m)
 			log.Println(e)
 
 			log.Println("emit:", so.Emit("chat message", msg))
 			so.BroadcastTo("chat", "chat message", msg)
 		})
-		so.On("t45", func(msg string) {
+		so.On("t45", func(_ string) {
 			err := so.Emit("r45", "Yep")
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
@@ -77,13 +77,13 @@ func main() {
 			log.Println("on disconnect")
 		})
 	})
-	server.On("error", func(so socketio.Socket, err error) {
+	server.On("error", func(_ socketio.Socket, err error) {
 		log.Println("error:", err)
 	})
 
 	http.Handle("/socket.io/", server)
 	http.Handle("/", http.FileServer(http.Dir("./asset")))
 	fmt.Printf("Serving on port %s, brows to http://localhost:%s/\n", port, port)
-	listen := fmt.Sprintf("%s:%s", host_ip, port)
+	listen := fmt.Sprintf("%s:%s", hostIP, port)
 	log.Fatal(http.ListenAndServe(listen, nil))
 }
