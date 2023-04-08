@@ -10,24 +10,22 @@ import (
 )
 
 func TestPacketType(t *testing.T) {
-
 	Convey("Type string", t, func() {
-		So(_CONNECT, ShouldEqual, 0)
-		So(_CONNECT.String(), ShouldEqual, "connect")
-		So(_DISCONNECT, ShouldEqual, 1)
-		So(_DISCONNECT.String(), ShouldEqual, "disconnect")
-		So(_EVENT, ShouldEqual, 2)
-		So(_EVENT.String(), ShouldEqual, "event")
-		So(_ACK, ShouldEqual, 3)
-		So(_ACK.String(), ShouldEqual, "ack")
-		So(_ERROR, ShouldEqual, 4)
-		So(_ERROR.String(), ShouldEqual, "error")
-		So(_BINARY_EVENT, ShouldEqual, 5)
-		So(_BINARY_EVENT.String(), ShouldEqual, "binary_event")
-		So(_BINARY_ACK, ShouldEqual, 6)
-		So(_BINARY_ACK.String(), ShouldEqual, "binary_ack")
+		So(Connect, ShouldEqual, 0)
+		So(Connect.String(), ShouldEqual, "connect")
+		So(Disconnect, ShouldEqual, 1)
+		So(Disconnect.String(), ShouldEqual, "disconnect")
+		So(Event, ShouldEqual, 2)
+		So(Event.String(), ShouldEqual, "event")
+		So(Ack, ShouldEqual, 3)
+		So(Ack.String(), ShouldEqual, "ack")
+		So(Error, ShouldEqual, 4)
+		So(Error.String(), ShouldEqual, "error")
+		So(BinaryEvent, ShouldEqual, 5)
+		So(BinaryEvent.String(), ShouldEqual, "binary_event")
+		So(BinaryAck, ShouldEqual, 6)
+		So(BinaryAck.String(), ShouldEqual, "binary_ack")
 	})
-
 }
 
 func TestParser(t *testing.T) {
@@ -53,7 +51,7 @@ func TestParser(t *testing.T) {
 		decoder := newDecoder(saver)
 		err = decoder.Decode(&d)
 		So(err, ShouldBeNil)
-		So(d.Id, ShouldEqual, p.Id)
+		So(d.ID, ShouldEqual, p.ID)
 		So(d.NSP, ShouldEqual, p.NSP)
 		if decodeData == nil {
 			So(d.Data, ShouldBeNil)
@@ -67,8 +65,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Only type", t, func() {
 		p = packet{
-			Type: _CONNECT,
-			Id:   -1,
+			Type: Connect,
+			ID:   -1,
 		}
 		decodeData = nil
 		output = "0"
@@ -79,8 +77,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type and id", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   1,
+			Type: Event,
+			ID:   1,
 		}
 		decodeData = nil
 		output = "21"
@@ -91,8 +89,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type and namespace", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   -1,
+			Type: Event,
+			ID:   -1,
 			NSP:  "/abc",
 		}
 		decodeData = nil
@@ -104,8 +102,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type, id and namespace", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   1,
+			Type: Event,
+			ID:   1,
 			NSP:  "/abc",
 		}
 		decodeData = nil
@@ -117,8 +115,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type, namespace and data", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   -1,
+			Type: Event,
+			ID:   -1,
 			NSP:  "/abc",
 			Data: []interface{}{"numbers", 1, 2, 3},
 		}
@@ -136,8 +134,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type, namespace, id and data", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   1,
+			Type: Event,
+			ID:   1,
 			NSP:  "/abc",
 			Data: []interface{}{"numbers", 1, 2, 3},
 		}
@@ -155,8 +153,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Type, namespace, id and data(ack)", t, func() {
 		p = packet{
-			Type: _ACK,
-			Id:   1,
+			Type: Ack,
+			ID:   1,
 			NSP:  "/abc",
 			Data: []interface{}{1, 2, 3},
 		}
@@ -174,8 +172,8 @@ func TestParser(t *testing.T) {
 
 	Convey("Binary type with attachment", t, func() {
 		p = packet{
-			Type: _EVENT,
-			Id:   1,
+			Type: Event,
+			ID:   1,
 			NSP:  "/abc",
 			Data: []interface{}{"binary", &Attachment{Data: bytes.NewBufferString("data")}},
 		}
@@ -188,5 +186,4 @@ func TestParser(t *testing.T) {
 
 		So(buf.String(), ShouldEqual, "data")
 	})
-
 }

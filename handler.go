@@ -2,11 +2,10 @@ package socketio
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
-
-	"github.com/pschlump/godebug"
-	logrus "github.com/pschlump/pslog" // "github.com/sirupsen/logrus"
+	// "github.com/sirupsen/logrus"
 )
 
 // PJS - could have it return more than just an error, if "rmsg" and "rbody" - then emit response?
@@ -14,13 +13,13 @@ import (
 type EventHandlerFunc func(so *Socket, message string, args [][]byte) error
 
 type baseHandler struct {
-	events      map[string]*caller
-	allEvents   []*caller
-	x_events    map[string]EventHandlerFunc
-	x_allEvents []EventHandlerFunc
-	name        string
-	broadcast   BroadcastAdaptor
-	lock        sync.RWMutex
+	events     map[string]*caller
+	allEvents  []*caller
+	xEvents    map[string]EventHandlerFunc
+	xAllEvents []EventHandlerFunc
+	name       string
+	broadcast  BroadcastAdaptor
+	lock       sync.RWMutex
 }
 
 func newBaseHandler(name string, broadcast BroadcastAdaptor) *baseHandler {
@@ -47,14 +46,14 @@ func (h *baseHandler) On(message string, f interface{}) error {
 
 func (h *baseHandler) Handle(message string, f EventHandlerFunc) error {
 	h.lock.Lock()
-	h.x_events[message] = f
+	h.xEvents[message] = f
 	h.lock.Unlock()
 	return nil
 }
 
 func (h *baseHandler) HandleAny(f EventHandlerFunc) error {
 	h.lock.Lock()
-	h.x_allEvents = append(h.x_allEvents, f)
+	h.xAllEvents = append(h.xAllEvents, f)
 	h.lock.Unlock()
 	return nil
 }
@@ -92,8 +91,8 @@ type socketHandler struct {
 func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	events := make(map[string]*caller)
 	allEvents := make([]*caller, 0, 5)
-	x_events := make(map[string]EventHandlerFunc)
-	x_allEvents := make([]EventHandlerFunc, 0, 5)
+	xEvents := make(map[string]EventHandlerFunc)
+	xAllEvents := make([]EventHandlerFunc, 0, 5)
 	base.lock.Lock()
 	for k, v := range base.events {
 		events[k] = v
@@ -101,11 +100,11 @@ func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	base.lock.Unlock()
 	return &socketHandler{
 		baseHandler: &baseHandler{
-			events:      events,
-			allEvents:   allEvents,
-			x_events:    x_events,
-			x_allEvents: x_allEvents,
-			broadcast:   base.broadcast,
+			events:     events,
+			allEvents:  allEvents,
+			xEvents:    xEvents,
+			xAllEvents: xAllEvents,
+			broadcast:  base.broadcast,
 		},
 		acks:   make(map[int]*caller),
 		socket: s,
@@ -153,7 +152,7 @@ func (h *socketHandler) Rooms() []string {
 }
 
 func (h *socketHandler) Join(room string) error {
-	if err := h.baseHandler.broadcast.Join(h.broadcastName(room), h.socket); err != nil {
+	if err := h.broadcast.Join(h.broadcastName(room), h.socket); err != nil {
 		return err
 	}
 	h.lock.Lock()
@@ -163,7 +162,7 @@ func (h *socketHandler) Join(room string) error {
 }
 
 func (h *socketHandler) Leave(room string) error {
-	if err := h.baseHandler.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
+	if err := h.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
 		return err
 	}
 	h.lock.Lock()
@@ -177,7 +176,7 @@ func (h *socketHandler) LeaveAll() error {
 	tmp := h.rooms
 	h.lock.RUnlock()
 	for room := range tmp {
-		if err := h.baseHandler.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
+		if err := h.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
 			return err
 		}
 	}
@@ -189,7 +188,7 @@ func (h *baseHandler) BroadcastTo(room, message string, args ...interface{}) err
 }
 
 func (h *socketHandler) BroadcastTo(room, message string, args ...interface{}) error {
-	return h.baseHandler.broadcast.Send(h.socket, h.broadcastName(room), message, args...)
+	return h.broadcast.Send(h.socket, h.broadcastName(room), message, args...)
 }
 
 func (h *baseHandler) broadcastName(room string) string {
@@ -197,54 +196,30 @@ func (h *baseHandler) broadcastName(room string) string {
 }
 
 func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{}, error) {
-	if Db1 {
-		fmt.Printf("At:%s\n", godebug.LF())
-	}
 	var message string
 	switch packet.Type {
-	case _CONNECT:
+	case Connect:
 		message = "connection"
-	case _DISCONNECT:
+	case Disconnect:
 		message = "disconnect"
-	case _ERROR:
+	case Error:
 		message = "error"
-	case _ACK:
-	case _BINARY_ACK:
-		return nil, h.onAck(packet.Id, decoder, packet)
+	case Ack:
+	case BinaryAck:
+		return nil, h.onAck(packet.ID, decoder, packet)
 	default:
 		message = decoder.Message()
 	}
-	if Db1 {
-		fmt.Printf("At:%s\n", godebug.LF())
-	}
 	h.PrintEventsRespondedTo()
-	if DbLogMessage {
-		fmt.Printf("Message [%s] ", message)
-		if Db1 {
-			fmt.Printf("%s\n", godebug.LF())
-		}
-	}
-
-	/*
-		// xyzzy - allEvents
-		for _, c2 := range h.allEvents {
-			args := c2.GetArgs() // returns Array of interface{}
-			olen := len(args)
-		}
-	*/
-
 	h.lock.RLock()
 	c, ok := h.events[message]
-	xc, ok1 := h.x_events[message]
+	xc, ok1 := h.xEvents[message]
 	h.lock.RUnlock()
 
 	if !ok && !ok1 {
-		if Db1 {
-			fmt.Printf("Did not have a handler for %s At:%s\n", message, godebug.LF())
-		}
 		// If the message is not recognized by the server, the decoder.currentCloser
 		// needs to be closed otherwise the server will be stuck until the e xyzzy
-		fmt.Printf("Error: %s was not found in h.events\n", message)
+		log.Printf("Error: %s was not found in h.events\n", message)
 		decoder.Close()
 		return nil, nil
 	}
@@ -269,20 +244,10 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	*/
 
 	args := c.GetArgs() // returns Array of interface{}
-	if Db1 {
-		fmt.Printf("len(args) = %d At:%s\n", len(args), godebug.LF())
-	}
 	olen := len(args)
-	if Db1 {
-		fmt.Printf("args = %v, %s\n", args, godebug.LF())
-	}
 	if olen > 0 {
 		packet.Data = &args
 		if err := decoder.DecodeData(packet); err != nil {
-			if Db1 {
-				fmt.Printf("At:%s, err=%s, an error at this point means that your handler did not get called\n", godebug.LF(), err)
-			}
-			fmt.Printf("Try a `map[string]interface{}` for a parameter type, %s\n", godebug.LF())
 			return nil, err
 		}
 	}
@@ -292,23 +257,9 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 		args = append(args, nil)
 	}
 
-	if DbLogMessage {
-		if Db1 {
-			fmt.Printf("\tArgs = %s, %s\n", godebug.SVar(args), godebug.LF())
-		} else {
-			fmt.Printf("Args = %s\n", godebug.SVar(args))
-		}
-	}
-	if LogMessage {
-		logrus.Infof("Message [%s] Auruments %s", message, godebug.SVar(args))
-	}
-
 	// ------------------------------------------------------ call ---------------------------------------------------------------------------------------
 	retV := c.Call(h.socket, args)
 	if len(retV) == 0 {
-		if Db1 {
-			fmt.Printf("At:%s\n", godebug.LF())
-		}
 		return nil, nil
 	}
 
@@ -321,23 +272,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	for i, v := range retV {
 		ret[i] = v.Interface()
 	}
-	if Db1 {
-		fmt.Printf("At:%s\n", godebug.LF())
-	}
-	if DbLogMessage {
-		if err != nil {
-			fmt.Printf("Response/Error %s", err)
-		} else {
-			fmt.Printf("Response %s", godebug.SVar(ret))
-		}
-	}
-	if LogMessage {
-		if err != nil {
-			logrus.Infof("Response/Error %s", err)
-		} else {
-			logrus.Infof("Response %s", godebug.SVar(ret))
-		}
-	}
+
 	return ret, err
 }
 
@@ -358,10 +293,3 @@ func (h *socketHandler) onAck(id int, decoder *decoder, packet *packet) error {
 	c.Call(h.socket, args)
 	return nil
 }
-
-var Db1 = false
-
-var DbLogMessage = true
-var LogMessage = true
-
-/* vim: set noai ts=4 sw=4: */

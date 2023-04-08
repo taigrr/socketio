@@ -13,25 +13,24 @@ import (
 //
 // For example:
 //
-//     type Arg struct {
-//         Title string `json:"title"`
-//         File *Attachment `json:"file"`
-//     }
+//	type Arg struct {
+//	    Title string `json:"title"`
+//	    File *Attachment `json:"file"`
+//	}
 //
-//     f, _ := os.Open("./some_file")
-//     arg := Arg{
-//         Title: "some_file",
-//         File: &Attachment{
-//             Data: f,
-//         }
-//     }
+//	f, _ := os.Open("./some_file")
+//	arg := Arg{
+//	    Title: "some_file",
+//	    File: &Attachment{
+//	        Data: f,
+//	    }
+//	}
 //
-//     socket.Emit("send file", arg)
-//     socket.On("get file", func(so Socket, arg Arg) {
-//         b, _ := ioutil.ReadAll(arg.File.Data)
-//     })
+//	socket.Emit("send file", arg)
+//	socket.On("get file", func(so Socket, arg Arg) {
+//	    b, _ := ioutil.ReadAll(arg.File.Data)
+//	})
 type Attachment struct {
-
 	// Data is the ReadWriter of the attachment data.
 	Data io.ReadWriter
 	num  int
@@ -61,8 +60,7 @@ func encodeAttachmentValue(v reflect.Value, index *int) []io.Reader {
 			return ret
 		}
 		for i, n := 0, v.NumField(); i < n; i++ {
-			var r []io.Reader
-			r = encodeAttachmentValue(v.Field(i), index)
+			r := encodeAttachmentValue(v.Field(i), index)
 			ret = append(ret, r...)
 		}
 	case reflect.Map:
@@ -70,8 +68,7 @@ func encodeAttachmentValue(v reflect.Value, index *int) []io.Reader {
 			return ret
 		}
 		for _, key := range v.MapKeys() {
-			var r []io.Reader
-			r = encodeAttachmentValue(v.MapIndex(key), index)
+			r := encodeAttachmentValue(v.MapIndex(key), index)
 			ret = append(ret, r...)
 		}
 	case reflect.Slice:
@@ -81,8 +78,7 @@ func encodeAttachmentValue(v reflect.Value, index *int) []io.Reader {
 		fallthrough
 	case reflect.Array:
 		for i, n := 0, v.Len(); i < n; i++ {
-			var r []io.Reader
-			r = encodeAttachmentValue(v.Index(i), index)
+			r := encodeAttachmentValue(v.Index(i), index)
 			ret = append(ret, r...)
 		}
 	case reflect.Interface:

@@ -4,7 +4,6 @@ import "sync"
 
 // Namespace is the name space of socket.io handler.
 type Namespace interface {
-
 	// Name returns the name of namespace.
 	Name() string
 
@@ -31,7 +30,7 @@ func newNamespace(broadcast BroadcastAdaptor) *namespace {
 }
 
 func (n *namespace) Name() string {
-	return n.baseHandler.name
+	return n.name
 }
 
 func (n *namespace) Of(name string) Namespace {
@@ -44,8 +43,9 @@ func (n *namespace) Of(name string) Namespace {
 		return ret
 	}
 	ret := &namespace{
-		baseHandler: newBaseHandler(name, n.baseHandler.broadcast),
+		baseHandler: newBaseHandler(name, n.broadcast),
 		root:        n.root,
+		lock:        sync.RWMutex{},
 	}
 	n.root[name] = ret
 	return ret

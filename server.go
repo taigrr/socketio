@@ -58,8 +58,8 @@ func (s *Server) SetCookie(prefix string) {
 	s.eio.SetCookie(prefix)
 }
 
-// SetNewId sets the callback func to generate new connection id. By default, id is generated from remote addr + current time stamp
-func (s *Server) SetNewId(f func(*http.Request) string) {
+// SetNewID sets the callback func to generate new connection id. By default, id is generated from remote addr + current time stamp
+func (s *Server) SetNewID(f func(*http.Request) string) {
 	s.eio.SetNewId(f)
 }
 

@@ -17,30 +17,30 @@ const Protocol = 4
 type packetType int
 
 const (
-	_CONNECT packetType = iota
-	_DISCONNECT
-	_EVENT
-	_ACK
-	_ERROR
-	_BINARY_EVENT
-	_BINARY_ACK
+	Connect packetType = iota
+	Disconnect
+	Event
+	Ack
+	Error
+	BinaryEvent
+	BinaryAck
 )
 
 func (t packetType) String() string {
 	switch t {
-	case _CONNECT:
+	case Connect:
 		return "connect"
-	case _DISCONNECT:
+	case Disconnect:
 		return "disconnect"
-	case _EVENT:
+	case Event:
 		return "event"
-	case _ACK:
+	case Ack:
 		return "ack"
-	case _ERROR:
+	case Error:
 		return "error"
-	case _BINARY_EVENT:
+	case BinaryEvent:
 		return "binary_event"
-	case _BINARY_ACK:
+	case BinaryAck:
 		return "binary_ack"
 	}
 	return fmt.Sprintf("unknown(%d)", t)
@@ -57,7 +57,7 @@ type frameWriter interface {
 type packet struct {
 	Type         packetType
 	NSP          string
-	Id           int
+	ID           int
 	Data         interface{}
 	attachNumber int
 }
@@ -77,7 +77,7 @@ func (e *encoder) Encode(v packet) error {
 	attachments := encodeAttachments(v.Data)
 	v.attachNumber = len(attachments)
 	if v.attachNumber > 0 {
-		v.Type += _BINARY_EVENT - _EVENT
+		v.Type += BinaryEvent - Event
 	}
 	if err := e.encodePacket(v); err != nil {
 		return err
@@ -100,7 +100,7 @@ func (e *encoder) encodePacket(v packet) error {
 	w := newTrimWriter(writer, "\n")
 	wh := newWriterHelper(w)
 	wh.Write([]byte{byte(v.Type) + '0'})
-	if v.Type == _BINARY_EVENT || v.Type == _BINARY_ACK {
+	if v.Type == BinaryEvent || v.Type == BinaryAck {
 		wh.Write([]byte(fmt.Sprintf("%d-", v.attachNumber)))
 	}
 	needEnd := false
@@ -108,13 +108,13 @@ func (e *encoder) encodePacket(v packet) error {
 		wh.Write([]byte(v.NSP))
 		needEnd = true
 	}
-	if v.Id >= 0 {
+	if v.ID >= 0 {
 		f := "%d"
 		if needEnd {
 			f = ",%d"
 			needEnd = false
 		}
-		wh.Write([]byte(fmt.Sprintf(f, v.Id)))
+		wh.Write([]byte(fmt.Sprintf(f, v.ID)))
 	}
 	if v.Data != nil {
 		if needEnd {
@@ -141,7 +141,6 @@ func (e *encoder) writeBinary(r io.Reader) error {
 		return err
 	}
 	return nil
-
 }
 
 type decoder struct {
@@ -184,7 +183,7 @@ func (d *decoder) Decode(v *packet) error {
 	}
 	reader := bufio.NewReader(r)
 
-	v.Id = -1
+	v.ID = -1
 
 	t, err := reader.ReadByte()
 	if err != nil {
@@ -192,7 +191,7 @@ func (d *decoder) Decode(v *packet) error {
 	}
 	v.Type = packetType(t - '0')
 
-	if v.Type == _BINARY_EVENT || v.Type == _BINARY_ACK {
+	if v.Type == BinaryEvent || v.Type == BinaryAck {
 		num, err := reader.ReadBytes('-')
 		if err != nil {
 			return err
@@ -262,16 +261,16 @@ func (d *decoder) Decode(v *packet) error {
 		if err != nil {
 			return err
 		}
-		v.Id = int(id)
+		v.ID = int(id)
 	}
 	if finish {
 		return nil
 	}
 
 	switch v.Type {
-	case _EVENT:
+	case Event:
 		fallthrough
-	case _BINARY_EVENT:
+	case BinaryEvent:
 		msgReader, err := newMessageReader(reader)
 		if err != nil {
 			return err
@@ -279,9 +278,9 @@ func (d *decoder) Decode(v *packet) error {
 		d.message = msgReader.Message()
 		d.current = msgReader
 		d.currentCloser = r
-	case _ACK:
+	case Ack:
 		fallthrough
-	case _BINARY_ACK:
+	case BinaryAck:
 		d.current = reader
 		d.currentCloser = r
 	}
@@ -304,7 +303,7 @@ func (d *decoder) DecodeData(v *packet) error {
 	if err := decoder.Decode(v.Data); err != nil {
 		return err
 	}
-	if v.Type == _BINARY_EVENT || v.Type == _BINARY_ACK {
+	if v.Type == BinaryEvent || v.Type == BinaryAck {
 		binary, err := d.decodeBinary(v.attachNumber)
 		if err != nil {
 			return err
@@ -312,7 +311,7 @@ func (d *decoder) DecodeData(v *packet) error {
 		if err := decodeAttachments(v.Data, binary); err != nil {
 			return err
 		}
-		v.Type -= _BINARY_EVENT - _EVENT
+		v.Type -= BinaryEvent - Event
 	}
 	return nil
 }
