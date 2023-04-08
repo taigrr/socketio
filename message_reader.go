@@ -40,7 +40,6 @@ func newMessageReader(bufr *bufio.Reader) (*messageReader, error) {
 }
 
 func (r *messageReader) Message() string {
-	// fmt.Printf("message_reader: Message() >%s<\n", r.message)
 	return r.message
 }
 

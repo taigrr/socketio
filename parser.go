@@ -290,7 +290,6 @@ func (d *decoder) Decode(v *packet) error {
 }
 
 func (d *decoder) Message() string {
-	// fmt.Printf("parser.c: Message() >%s<\n", d.message)
 	return d.message
 }
 

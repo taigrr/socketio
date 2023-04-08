@@ -23,7 +23,6 @@ type baseHandler struct {
 }
 
 func newBaseHandler(name string, broadcast BroadcastAdaptor) *baseHandler {
-	// fmt.Printf("*********************************************************************** this one *********************************************************************\n")
 	return &baseHandler{
 		events:    make(map[string]*caller),
 		allEvents: make([]*caller, 0, 5),
@@ -210,7 +209,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	default:
 		message = decoder.Message()
 	}
-	h.PrintEventsRespondedTo()
+	// h.PrintEventsRespondedTo()
 	h.lock.RLock()
 	c, ok := h.events[message]
 	xc, ok1 := h.xEvents[message]
@@ -225,24 +224,6 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	}
 
 	_ = xc
-	/* New -----------------------------------------------------------------------------------------------------------------
-	if ok1 {
-		// type EventHandlerFunc func(so *Socket, message string, args [][]byte) error
-		err, xargs, nargs := decoder.DecodeDataX(packet)
-		if err != nil {
-			fmt.Printf("Unable to decode packet, %s, %s\n", err, godebug.LF())
-			return nil, err
-		}
-		err := xc(xyzzy, message, xargs, nargs)
-		if err != nil {
-			fmt.Printf("Handler reported an error: %s, message=%s\n", err, message, godebug.LF())
-			return nil, err
-		}
-		return nil, nil
-
-	}
-	*/
-
 	args := c.GetArgs() // returns Array of interface{}
 	olen := len(args)
 	if olen > 0 {

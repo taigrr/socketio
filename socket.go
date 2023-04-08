@@ -27,7 +27,6 @@ type socket struct {
 }
 
 func newSocket(conn engineio.Conn, base *baseHandler) *socket {
-	// fmt.Printf("This Socket\n")
 	ret := &socket{
 		conn: conn,
 	}
