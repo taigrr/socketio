@@ -23,7 +23,6 @@ const (
 
 // Conn is the connection object of engine.io.
 type Conn interface {
-
 	// Id returns the session id of connection.
 	Id() string
 
@@ -358,8 +357,11 @@ func (c *serverConn) pingLoop() {
 		case <-time.After(c.pingInterval - tryDiff):
 			c.writerLocker.Lock()
 			if w, _ := c.getCurrent().NextWriter(message.MessageText, parser.PING); w != nil {
+				// Lock Transport to prevent race condition of transport writes
+				c.transportLocker.Lock()
 				writer := newConnWriter(w, &c.writerLocker)
 				writer.Close()
+				c.transportLocker.Unlock()
 			} else {
 				c.writerLocker.Unlock()
 			}
