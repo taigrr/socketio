@@ -14,8 +14,6 @@ type BroadcastAdaptor interface {
 	Send(ignore Socket, room, message string, args ...interface{}) error
 }
 
-var newBroadcast = newBroadcastDefault
-
 // Broadcast is a set of "room" each with a set of Socket
 type broadcast struct {
 	roomSet       map[string]map[string]Socket

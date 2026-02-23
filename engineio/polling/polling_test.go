@@ -1,14 +1,14 @@
 package polling
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -73,7 +73,7 @@ func TestPolling(t *testing.T) {
 		{
 			r, err := client.NextReader()
 			So(err, ShouldBeNil)
-			b, err := ioutil.ReadAll(r)
+			b, err := io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc1"))
 			err = r.Close()
@@ -81,7 +81,7 @@ func TestPolling(t *testing.T) {
 
 			r, err = client.NextReader()
 			So(err, ShouldBeNil)
-			b, err = ioutil.ReadAll(r)
+			b, err = io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc2"))
 			err = r.Close()
@@ -100,7 +100,7 @@ func TestPolling(t *testing.T) {
 		{
 			r, err := client.NextReader()
 			So(err, ShouldBeNil)
-			b, err := ioutil.ReadAll(r)
+			b, err := io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc"))
 			err = r.Close()
@@ -168,7 +168,7 @@ func TestPolling(t *testing.T) {
 		{
 			r, err := client.NextReader()
 			So(err, ShouldBeNil)
-			b, err := ioutil.ReadAll(r)
+			b, err := io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc1"))
 			err = r.Close()
@@ -176,7 +176,7 @@ func TestPolling(t *testing.T) {
 
 			r, err = client.NextReader()
 			So(err, ShouldBeNil)
-			b, err = ioutil.ReadAll(r)
+			b, err = io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc2"))
 			err = r.Close()
@@ -195,7 +195,7 @@ func TestPolling(t *testing.T) {
 		{
 			r, err := client.NextReader()
 			So(err, ShouldBeNil)
-			b, err := ioutil.ReadAll(r)
+			b, err := io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(b, ShouldResemble, []byte("abc"))
 			err = r.Close()

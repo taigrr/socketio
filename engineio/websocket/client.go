@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 
 	"github.com/gorilla/websocket"
 )

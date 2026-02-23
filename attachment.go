@@ -6,7 +6,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/pschlump/json" //	"encoding/json"
+	"encoding/json"
 )
 
 // Attachment is an attachment handler used in emit args. All attachments will send as binary in transport layer. When use attachment, make sure use as pointer.
@@ -28,7 +28,7 @@ import (
 //
 //	socket.Emit("send file", arg)
 //	socket.On("get file", func(so Socket, arg Arg) {
-//	    b, _ := ioutil.ReadAll(arg.File.Data)
+//	    b, _ := io.ReadAll(arg.File.Data)
 //	})
 type Attachment struct {
 	// Data is the ReadWriter of the attachment data.

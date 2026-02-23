@@ -2,16 +2,16 @@ package websocket
 
 import (
 	"encoding/hex"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"sync"
 	"testing"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 
 	"github.com/gorilla/websocket"
 
@@ -136,7 +136,7 @@ func TestWebsocket(t *testing.T) {
 		{
 			decoder, _ := c.NextReader()
 			defer decoder.Close()
-			ioutil.ReadAll(decoder)
+			io.ReadAll(decoder)
 		}
 
 		sync <- 1
@@ -145,7 +145,7 @@ func TestWebsocket(t *testing.T) {
 		{
 			decoder, _ := c.NextReader()
 			defer decoder.Close()
-			ioutil.ReadAll(decoder)
+			io.ReadAll(decoder)
 		}
 
 		sync <- 1
@@ -234,7 +234,7 @@ func TestWebsocket(t *testing.T) {
 			defer decoder.Close()
 			So(decoder.MessageType(), ShouldEqual, message.MessageText)
 			So(decoder.Type(), ShouldEqual, parser.OPEN)
-			b, err := ioutil.ReadAll(decoder)
+			b, err := io.ReadAll(decoder)
 			So(err, ShouldBeNil)
 			So(string(b), ShouldEqual, "")
 		}
@@ -248,7 +248,7 @@ func TestWebsocket(t *testing.T) {
 			defer decoder.Close()
 			So(decoder.MessageType(), ShouldEqual, message.MessageBinary)
 			So(decoder.Type(), ShouldEqual, parser.NOOP)
-			b, err := ioutil.ReadAll(decoder)
+			b, err := io.ReadAll(decoder)
 			So(err, ShouldBeNil)
 			So(string(b), ShouldEqual, "")
 		}
@@ -302,7 +302,7 @@ func TestWebsocket(t *testing.T) {
 			t, r, err := client.conn.NextReader()
 			So(err, ShouldBeNil)
 			So(t, ShouldEqual, websocket.TextMessage)
-			b, err := ioutil.ReadAll(r)
+			b, err := io.ReadAll(r)
 			So(err, ShouldBeNil)
 			So(string(b), ShouldEqual, "4日本語")
 			So(hex.EncodeToString(b), ShouldEqual, "34e697a5e69cace8aa9e")
@@ -362,6 +362,7 @@ func TestWebsocket(t *testing.T) {
 		defer c.Close()
 
 		<-sync
+		<-f.onClose
 		So(f.ClosedCount(), ShouldEqual, 1)
 	})
 
@@ -402,6 +403,7 @@ func TestWebsocket(t *testing.T) {
 
 type fakeCallback struct {
 	onPacket    chan bool
+	onClose     chan bool
 	messageType message.MessageType
 	packetType  parser.PacketType
 	body        []byte
@@ -414,13 +416,14 @@ type fakeCallback struct {
 func newFakeCallback() *fakeCallback {
 	return &fakeCallback{
 		onPacket: make(chan bool),
+		onClose:  make(chan bool, 1),
 	}
 }
 
 func (f *fakeCallback) OnPacket(r *parser.PacketDecoder) {
 	f.packetType = r.Type()
 	f.messageType = r.MessageType()
-	f.body, f.err = ioutil.ReadAll(r)
+	f.body, f.err = io.ReadAll(r)
 	f.onPacket <- true
 }
 
@@ -429,6 +432,10 @@ func (f *fakeCallback) OnClose(s transport.Server) {
 	defer f.countLocker.Unlock()
 	f.closedCount++
 	f.closeServer = s
+	select {
+	case f.onClose <- true:
+	default:
+	}
 }
 
 func (f *fakeCallback) ClosedCount() int {

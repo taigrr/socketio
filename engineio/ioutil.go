@@ -4,7 +4,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/pschlump/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/parser"
 )
 
 type connReader struct {

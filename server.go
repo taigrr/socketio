@@ -4,14 +4,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pschlump/socketio/engineio"
+	"github.com/taigrr/socketio/engineio"
 )
 
 // Server is the server of socket.io.
 type Server struct {
 	*namespace
-	broadcast BroadcastAdaptor
-	eio       *engineio.Server
+	eio *engineio.Server
 }
 
 // NewServer returns the server supported given transports. If transports is nil, server will use ["polling", "websocket"] as default.

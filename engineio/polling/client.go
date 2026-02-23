@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 )
 
 type client struct {
@@ -117,7 +116,7 @@ func (c *client) doPost() error {
 	if err := c.payloadEncoder.EncodeTo(buf); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(buf)
+	req.Body = io.NopCloser(buf)
 	var err error
 	c.postResp, err = c.client.Do(req)
 	if err != nil {

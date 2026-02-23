@@ -5,11 +5,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strconv"
 
-	"github.com/pschlump/json" //	"encoding/json"
-	"github.com/pschlump/socketio/engineio"
+	"encoding/json"
+	"github.com/taigrr/socketio/engineio"
 )
 
 const Protocol = 4
@@ -63,8 +62,7 @@ type packet struct {
 }
 
 type encoder struct {
-	w   frameWriter
-	err error
+	w frameWriter
 }
 
 func newEncoder(w frameWriter) *encoder {
@@ -329,7 +327,7 @@ func (d *decoder) decodeBinary(num int) ([][]byte, error) {
 		if t == engineio.MessageText {
 			return nil, fmt.Errorf("need binary")
 		}
-		b, err := ioutil.ReadAll(r)
+		b, err := io.ReadAll(r)
 		if err != nil {
 			return nil, err
 		}

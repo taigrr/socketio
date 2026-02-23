@@ -18,7 +18,7 @@ func TestLimitReader(t *testing.T) {
 		n, err := r.Read(p)
 		So(err, ShouldBeNil)
 		So(string(p[:n]), ShouldEqual, "12345")
-		n, err = r.Read(p)
+		_, err = r.Read(p)
 		So(err, ShouldEqual, io.EOF)
 		err = r.Close()
 		So(err, ShouldBeNil)
