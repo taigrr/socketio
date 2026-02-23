@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 
 	"github.com/gorilla/websocket"
 )
@@ -32,8 +32,14 @@ var upgrader = websocket.Upgrader{
 }
 */
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  10240,
+	WriteBufferSize: 10240,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
 func NewServer(w http.ResponseWriter, r *http.Request, callback transport.Callback) (transport.Server, error) {
-	conn, err := websocket.Upgrade(w, r, nil, 10240, 10240) // Origin is NIL parameter?? PJS
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}

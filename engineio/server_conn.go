@@ -4,14 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/pschlump/json" //	"encoding/json"
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"encoding/json"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 )
 
 type MessageType message.MessageType
@@ -79,7 +80,11 @@ type serverConn struct {
 	pingChan        chan bool
 }
 
-var InvalidError = errors.New("invalid transport")
+// ErrInvalidTransport is returned when the requested transport is not available.
+var ErrInvalidTransport = errors.New("invalid transport")
+
+// InvalidError is deprecated: use ErrInvalidTransport instead.
+var InvalidError = ErrInvalidTransport
 
 func newServerConn(id string, w http.ResponseWriter, r *http.Request, callback serverCallback) (*serverConn, error) {
 	transportName := r.URL.Query().Get("transport")
@@ -165,7 +170,10 @@ func (c *serverConn) Close() error {
 		c.writerLocker.Unlock()
 	}
 	if err := c.getCurrent().Close(); err != nil {
-		return err
+		// Ignore errors from already-closed connections
+		if !errors.Is(err, net.ErrClosed) {
+			return err
+		}
 	}
 	c.setState(stateClosing)
 	return nil

@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/transport"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/transport"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -490,7 +489,7 @@ func newFakeCallback() *fakeCallback {
 func (f *fakeCallback) OnPacket(r *parser.PacketDecoder) {
 	f.packetType = r.Type()
 	f.messageType = r.MessageType()
-	f.body, f.err = ioutil.ReadAll(r)
+	f.body, f.err = io.ReadAll(r)
 	f.onPacket <- true
 }
 

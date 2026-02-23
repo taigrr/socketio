@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pschlump/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/parser"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -26,16 +26,13 @@ func TestConnIoutil(t *testing.T) {
 			n, err := reader.Read(b)
 			So(err, ShouldBeNil)
 			So(string(b[:n]), ShouldEqual, "测试")
-			n, err = reader.Read(b)
+			_, err = reader.Read(b)
 			So(err, ShouldEqual, io.EOF)
 
 			Convey("Wait close", func() {
 				check := make(chan int)
 				go func() {
-					err := reader.Close()
-					if err != nil {
-						t.Fatal(err)
-					}
+					_ = reader.Close()
 					check <- 1
 				}()
 

@@ -17,7 +17,7 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 
-	"github.com/pschlump/socketio"
+	"github.com/taigrr/socketio"
 )
 
 var (

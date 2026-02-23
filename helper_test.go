@@ -3,9 +3,8 @@ package socketio
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
-	"github.com/pschlump/socketio/engineio"
+	"github.com/taigrr/socketio/engineio"
 )
 
 type WriterNopCloser struct {
@@ -46,5 +45,5 @@ func (f *FrameSaver) NextReader() (engineio.MessageType, io.ReadCloser, error) {
 	}
 	ret := f.data[0]
 	f.data = f.data[1:]
-	return ret.Type, ioutil.NopCloser(ret.Buffer), nil
+	return ret.Type, io.NopCloser(ret.Buffer), nil
 }

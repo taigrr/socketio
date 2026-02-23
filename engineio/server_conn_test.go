@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pschlump/socketio/engineio/message"
-	"github.com/pschlump/socketio/engineio/parser"
-	"github.com/pschlump/socketio/engineio/polling"
-	"github.com/pschlump/socketio/engineio/websocket"
+	"github.com/taigrr/socketio/engineio/message"
+	"github.com/taigrr/socketio/engineio/parser"
+	"github.com/taigrr/socketio/engineio/polling"
+	"github.com/taigrr/socketio/engineio/websocket"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -268,7 +268,7 @@ func TestConn(t *testing.T) {
 			encoder.Write([]byte("probe"))
 			encoder.Close()
 
-			decoder, err = wc.NextReader()
+			_, err = wc.NextReader()
 			So(err, ShouldBeNil)
 			So(wc.Response().StatusCode, ShouldEqual, http.StatusSwitchingProtocols)
 

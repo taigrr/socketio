@@ -22,9 +22,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pschlump/MiscLib"
-	"github.com/pschlump/godebug"
-	"github.com/pschlump/socketio"
+	"runtime"
+
+	"github.com/taigrr/socketio"
 )
 
 var Port = flag.String("port", "9000", "Port to listen to")                           // 0
@@ -54,6 +54,14 @@ $ go run main.go [ -P | --port #### ] [ -H | --host IP-Host ] [ -d | --dir Path-
 
 var DebugFlag = make(map[string]bool)
 
+func callerInfo() string {
+	_, file, line, ok := runtime.Caller(1)
+	if !ok {
+		return "unknown"
+	}
+	return fmt.Sprintf("%s:%d", file, line)
+}
+
 func main() {
 
 	flag.Parse()
@@ -74,9 +82,7 @@ func main() {
 		for _, s := range strings.Split(*Debug, ",") {
 			DebugFlag[s] = true
 		}
-		if DebugFlag["socketio.Db1"] {
-			socketio.Db1 = true
-		}
+		// Debug flags removed (legacy pschlump debug system)
 	}
 
 	// Make certain that the command line parameters are handled correctly
@@ -84,7 +90,7 @@ func main() {
 
 	server, err := socketio.NewServer(nil)
 	if err != nil {
-		log.Fatal(fmt.Errorf("During attempt to create a new Socket.IO Server: %s, AT:%s", err, godebug.LF()))
+		log.Fatal(fmt.Errorf("creating socket.io server at %s: %w", callerInfo(), err))
 	}
 
 	// connection ->
@@ -95,34 +101,34 @@ func main() {
 	//  stop typing -> ???
 
 	server.On("connection", func(so socketio.Socket) {
-		fmt.Printf("%sa user connected%s, %s\n", MiscLib.ColorGreen, MiscLib.ColorReset, godebug.LF())
+		fmt.Printf("%sa user connected%s, %s\n", "MiscLib.ColorGreen33[32m", "MiscLib.ColorReset33[0m", callerInfo())
 		so.Join("chat")
 		//so.On("chat message", func(msg string) {
-		//	fmt.Printf("%schat message, %s%s, %s\n", MiscLib.ColorGreen, msg, MiscLib.ColorReset, godebug.LF())
+		//	fmt.Printf("%schat message, %s%s, %s\n", "MiscLib.ColorGreen33[32m", msg, "MiscLib.ColorReset33[0m", callerInfo())
 		//	so.BroadcastTo("chat", "chat message", msg)
 		//})
 		so.On("new message", func(msg string) {
-			fmt.Printf("%schat message: -->>%s<<--%s, %s\n", MiscLib.ColorGreen, msg, MiscLib.ColorReset, godebug.LF())
+			fmt.Printf("%schat message: -->>%s<<--%s, %s\n", "MiscLib.ColorGreen33[32m", msg, "MiscLib.ColorReset33[0m", callerInfo())
 			so.BroadcastTo("chat", "chat message", msg)
 		})
 		so.On("disconnect", func() {
-			fmt.Printf("%suser disconnect%s, %s\n", MiscLib.ColorYellow, MiscLib.ColorReset, godebug.LF())
+			fmt.Printf("%suser disconnect%s, %s\n", "MiscLib.ColorYellow33[33m", "MiscLib.ColorReset33[0m", callerInfo())
 		})
 		so.On("add user", func() {
-			fmt.Printf("%sadd user%s, %s\n", MiscLib.ColorRed, MiscLib.ColorReset, godebug.LF())
+			fmt.Printf("%sadd user%s, %s\n", "MiscLib.ColorRed33[31m", "MiscLib.ColorReset33[0m", callerInfo())
 			so.Emit("login", fmt.Sprintf("Hello %s", "xyzzy"))
 		})
 
 		so.On("typing", func() {
-			fmt.Printf("%styping%s, %s\n", MiscLib.ColorRed, MiscLib.ColorReset, godebug.LF())
+			fmt.Printf("%styping%s, %s\n", "MiscLib.ColorRed33[31m", "MiscLib.ColorReset33[0m", callerInfo())
 		})
 		so.On("stop typing", func() {
-			fmt.Printf("%sstop typing%s, %s\n", MiscLib.ColorRed, MiscLib.ColorReset, godebug.LF())
+			fmt.Printf("%sstop typing%s, %s\n", "MiscLib.ColorRed33[31m", "MiscLib.ColorReset33[0m", callerInfo())
 		})
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
-		fmt.Printf("Error: %s, %s\n", err, godebug.LF())
+		fmt.Printf("Error: %s, %s\n", err, callerInfo())
 	})
 
 	http.Handle("/socket.io/", server)

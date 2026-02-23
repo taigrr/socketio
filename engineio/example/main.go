@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/hex"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/pschlump/socketio/engineio"
+	"github.com/taigrr/socketio/engineio"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 					if err != nil {
 						return
 					}
-					b, err := ioutil.ReadAll(r)
+					b, err := io.ReadAll(r)
 					if err != nil {
 						return
 					}

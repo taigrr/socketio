@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pschlump/socketio/engineio/polling"
-	"github.com/pschlump/socketio/engineio/websocket"
+	"github.com/taigrr/socketio/engineio/polling"
+	"github.com/taigrr/socketio/engineio/websocket"
 )
 
 type config struct {

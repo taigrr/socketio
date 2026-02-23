@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pschlump/json" //	"encoding/json"
+	"encoding/json"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

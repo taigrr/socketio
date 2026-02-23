@@ -3,7 +3,7 @@ package socketio
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -16,7 +16,7 @@ func TestMessageReader(t *testing.T) {
 		reader, err := newMessageReader(buf)
 		So(err, ShouldBeNil)
 		So(reader.Message(), ShouldEqual, "message")
-		b, err := ioutil.ReadAll(reader)
+		b, err := io.ReadAll(reader)
 		So(err, ShouldBeNil)
 		So(string(b), ShouldEqual, "[1]")
 	})
@@ -26,7 +26,7 @@ func TestMessageReader(t *testing.T) {
 		reader, err := newMessageReader(buf)
 		So(err, ShouldBeNil)
 		So(reader.Message(), ShouldEqual, "message")
-		b, err := ioutil.ReadAll(reader)
+		b, err := io.ReadAll(reader)
 		So(err, ShouldBeNil)
 		So(string(b), ShouldEqual, "[   1]")
 	})
@@ -36,7 +36,7 @@ func TestMessageReader(t *testing.T) {
 		reader, err := newMessageReader(buf)
 		So(err, ShouldBeNil)
 		So(reader.Message(), ShouldEqual, "message")
-		b, err := ioutil.ReadAll(reader)
+		b, err := io.ReadAll(reader)
 		So(err, ShouldBeNil)
 		So(string(b), ShouldEqual, "[]")
 	})
@@ -46,7 +46,7 @@ func TestMessageReader(t *testing.T) {
 		reader, err := newMessageReader(buf)
 		So(err, ShouldBeNil)
 		So(reader.Message(), ShouldEqual, "message")
-		b, err := ioutil.ReadAll(reader)
+		b, err := io.ReadAll(reader)
 		So(err, ShouldBeNil)
 		So(string(b), ShouldEqual, "[]")
 	})
