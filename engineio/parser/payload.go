@@ -115,7 +115,7 @@ func (e *PayloadEncoder) EncodeTo(w io.Writer) error {
 	return nil
 }
 
-//IsString returns true if payload encode to string, otherwise returns false.
+// IsString returns true if payload encode to string, otherwise returns false.
 func (e *PayloadEncoder) IsString() bool {
 	return e.isString
 }
