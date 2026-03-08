@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,8 +23,8 @@ func TestWebsocket(t *testing.T) {
 
 	Convey("Creater", t, func() {
 		So(Creater.Name, ShouldEqual, "websocket")
-		So(Creater.Server, ShouldEqual, NewServer)
-		So(Creater.Client, ShouldEqual, NewClient)
+		So(fmt.Sprintf("%p", Creater.Server), ShouldEqual, fmt.Sprintf("%p", transport.Creater{Server: NewServer}.Server))
+		So(fmt.Sprintf("%p", Creater.Client), ShouldEqual, fmt.Sprintf("%p", transport.Creater{Client: NewClient}.Client))
 	})
 
 	Convey("Normal work, server part", t, func() {

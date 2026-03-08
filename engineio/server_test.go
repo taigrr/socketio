@@ -1,6 +1,7 @@
 package engineio
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -18,7 +19,7 @@ func TestServer(t *testing.T) {
 		So(server.config.PingTimeout, ShouldEqual, 10*time.Second)
 		f := func(*http.Request) error { return nil }
 		server.SetAllowRequest(f)
-		So(server.config.AllowRequest, ShouldEqual, f)
+		So(fmt.Sprintf("%p", server.config.AllowRequest), ShouldEqual, fmt.Sprintf("%p", f))
 		server.SetAllowUpgrades(false)
 		So(server.config.AllowUpgrades, ShouldBeFalse)
 		server.SetCookie("prefix")

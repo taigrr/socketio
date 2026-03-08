@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"encoding/json"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 

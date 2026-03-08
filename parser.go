@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"encoding/json"
+
 	"github.com/taigrr/socketio/engineio"
 )
 

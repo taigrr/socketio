@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"encoding/json"
+
 	"github.com/taigrr/socketio/engineio/message"
 	"github.com/taigrr/socketio/engineio/parser"
 	"github.com/taigrr/socketio/engineio/transport"
