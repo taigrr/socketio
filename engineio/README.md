@@ -1,41 +1,32 @@
-# go-engine.io
+# engineio
 
-[![GoDoc](http://godoc.org/github.com/googollee/go-engine.io?status.svg)](http://godoc.org/github.com/googollee/go-engine.io) [![Build Status](https://travis-ci.org/googollee/go-engine.io.svg)](https://travis-ci.org/googollee/go-engine.io)
+[![Go Reference](https://pkg.go.dev/badge/github.com/taigrr/socketio/engineio.svg)](https://pkg.go.dev/github.com/taigrr/socketio/engineio)
 
-go-engine.io is the implement of engine.io in golang, which is transport-based cross-browser/cross-device bi-directional communication layer for [go-socket.io](https://github.com/googollee/go-socket.io).
+A Go implementation of [engine.io](https://github.com/socketio/engine.io), the transport layer
+for [socket.io](https://socket.io). Supports long-polling and WebSocket transports.
 
-It is compatible with node.js implement, and supported long-polling and websocket transport.
+Compatible with the Node.js engine.io implementation.
 
 ## Install
 
-Install the package with:
-
 ```bash
-go get github.com/googollee/go-engine.io
+go get github.com/taigrr/socketio/engineio
 ```
-
-Import it with:
-
-```go
-import "github.com/googollee/go-engine.io"
-```
-
-and use `engineio` as the package name inside the code.
 
 ## Example
 
-Please check example folder for details.
+See the [example](./example) directory for a working demo.
 
 ```go
 package main
 
 import (
 	"encoding/hex"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
-	"github.com/googollee/go-engine.io"
+	"github.com/taigrr/socketio/engineio"
 )
 
 func main() {
@@ -51,7 +42,7 @@ func main() {
 				defer conn.Close()
 				for i := 0; i < 10; i++ {
 					t, r, _ := conn.NextReader()
-					b, _ := ioutil.ReadAll(r)
+					b, _ := io.ReadAll(r)
 					r.Close()
 					if t == engineio.MessageText {
 						log.Println(t, string(b))
@@ -68,11 +59,11 @@ func main() {
 
 	http.Handle("/engine.io/", server)
 	http.Handle("/", http.FileServer(http.Dir("./asset")))
-	log.Println("Serving at localhost:5000...")
+	log.Println("serving at localhost:5000...")
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
 ```
 
 ## License
 
-The 3-clause BSD License  - see LICENSE for more details
+3-clause BSD — see [LICENSE](../LICENSE) for details.
