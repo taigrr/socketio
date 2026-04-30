@@ -87,7 +87,7 @@ func (s *socket) sendID(args []interface{}) (int, error) {
 	encoder := newEncoder(s.conn)
 	err := encoder.Encode(p)
 	if err != nil {
-		return -1, nil
+		return -1, err
 	}
 	return p.ID, nil
 }
