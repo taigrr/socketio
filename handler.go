@@ -24,10 +24,12 @@ type baseHandler struct {
 
 func newBaseHandler(name string, broadcast BroadcastAdaptor) *baseHandler {
 	return &baseHandler{
-		events:    make(map[string]*caller),
-		allEvents: make([]*caller, 0, 5),
-		name:      name,
-		broadcast: broadcast,
+		events:     make(map[string]*caller),
+		allEvents:  make([]*caller, 0, 5),
+		xEvents:    make(map[string]EventHandlerFunc),
+		xAllEvents: make([]EventHandlerFunc, 0, 5),
+		name:       name,
+		broadcast:  broadcast,
 	}
 }
 
@@ -89,13 +91,18 @@ type socketHandler struct {
 
 func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	events := make(map[string]*caller)
-	allEvents := make([]*caller, 0, 5)
+	allEvents := make([]*caller, 0, len(base.allEvents))
 	xEvents := make(map[string]EventHandlerFunc)
-	xAllEvents := make([]EventHandlerFunc, 0, 5)
+	xAllEvents := make([]EventHandlerFunc, 0, len(base.xAllEvents))
 	base.lock.Lock()
 	for k, v := range base.events {
 		events[k] = v
 	}
+	allEvents = append(allEvents, base.allEvents...)
+	for k, v := range base.xEvents {
+		xEvents[k] = v
+	}
+	xAllEvents = append(xAllEvents, base.xAllEvents...)
 	base.lock.Unlock()
 	return &socketHandler{
 		baseHandler: &baseHandler{
