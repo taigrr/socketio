@@ -171,10 +171,15 @@ func (h *socketHandler) Leave(room string) error {
 }
 
 func (h *socketHandler) LeaveAll() error {
-	h.lock.RLock()
-	tmp := h.rooms
-	h.lock.RUnlock()
-	for room := range tmp {
+	h.lock.Lock()
+	rooms := make([]string, 0, len(h.rooms))
+	for room := range h.rooms {
+		rooms = append(rooms, room)
+	}
+	h.rooms = make(map[string]struct{})
+	h.lock.Unlock()
+
+	for _, room := range rooms {
 		if err := h.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
 			return err
 		}
