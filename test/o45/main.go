@@ -53,7 +53,7 @@ func main() {
 		log.Println("on connection")
 		so.Join("chat")
 		so.On("chat message", func(msg string) {
-			m := make(map[string]interface{})
+			m := make(map[string]any)
 			m["a"] = "你好" // hello there
 			so.Emit("cn1111", m)
 			// 这个没有问题			// this is no problem

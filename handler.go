@@ -3,9 +3,9 @@ package socketio
 import (
 	"fmt"
 	"log"
+	"maps"
 	"reflect"
 	"sync"
-	// "github.com/sirupsen/logrus"
 )
 
 // PJS - could have it return more than just an error, if "rmsg" and "rbody" - then emit response?
@@ -34,7 +34,7 @@ func newBaseHandler(name string, broadcast BroadcastAdaptor) *baseHandler {
 }
 
 // On registers the function f to handle message.
-func (h *baseHandler) On(message string, f interface{}) error {
+func (h *baseHandler) On(message string, f any) error {
 	c, err := newCaller(f)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (h *baseHandler) HandleAny(f EventHandlerFunc) error {
 }
 
 // On registers the function f to handle ANY message.
-func (h *baseHandler) OnAny(f interface{}) error {
+func (h *baseHandler) OnAny(f any) error {
 	c, err := newCaller(f)
 	if err != nil {
 		return err
@@ -95,13 +95,9 @@ func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	xEvents := make(map[string]EventHandlerFunc)
 	xAllEvents := make([]EventHandlerFunc, 0, len(base.xAllEvents))
 	base.lock.Lock()
-	for k, v := range base.events {
-		events[k] = v
-	}
+	maps.Copy(events, base.events)
 	allEvents = append(allEvents, base.allEvents...)
-	for k, v := range base.xEvents {
-		xEvents[k] = v
-	}
+	maps.Copy(xEvents, base.xEvents)
 	xAllEvents = append(xAllEvents, base.xAllEvents...)
 	base.lock.Unlock()
 	return &socketHandler{
@@ -118,7 +114,7 @@ func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	}
 }
 
-func (h *socketHandler) Emit(message string, args ...interface{}) error {
+func (h *socketHandler) Emit(message string, args ...any) error {
 	var c *caller
 	if l := len(args); l > 0 {
 		fv := reflect.ValueOf(args[l-1])
@@ -131,7 +127,7 @@ func (h *socketHandler) Emit(message string, args ...interface{}) error {
 			args = args[:l-1]
 		}
 	}
-	args = append([]interface{}{message}, args...)
+	args = append([]any{message}, args...)
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	if c != nil {
@@ -194,11 +190,11 @@ func (h *socketHandler) LeaveAll() error {
 	return nil
 }
 
-func (h *baseHandler) BroadcastTo(room, message string, args ...interface{}) error {
+func (h *baseHandler) BroadcastTo(room, message string, args ...any) error {
 	return h.broadcast.Send(nil, h.broadcastName(room), message, args...)
 }
 
-func (h *socketHandler) BroadcastTo(room, message string, args ...interface{}) error {
+func (h *socketHandler) BroadcastTo(room, message string, args ...any) error {
 	return h.broadcast.Send(h.socket, h.broadcastName(room), message, args...)
 }
 
@@ -206,7 +202,7 @@ func (h *baseHandler) broadcastName(room string) string {
 	return fmt.Sprintf("%s:%s", h.name, room)
 }
 
-func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{}, error) {
+func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error) {
 	var message string
 	switch packet.Type {
 	case Connect:
@@ -221,7 +217,6 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	default:
 		message = decoder.Message()
 	}
-	// h.PrintEventsRespondedTo()
 	h.lock.RLock()
 	c, ok := h.events[message]
 	xc, ok1 := h.xEvents[message]
@@ -236,7 +231,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 	}
 
 	_ = xc
-	args := c.GetArgs() // returns Array of interface{}
+	args := c.GetArgs()
 	olen := len(args)
 	if olen > 0 {
 		packet.Data = &args
@@ -245,12 +240,11 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 		}
 	}
 
-	// Padd out args to olen
+	// Pad out args to olen
 	for i := len(args); i < olen; i++ {
 		args = append(args, nil)
 	}
 
-	// ------------------------------------------------------ call ---------------------------------------------------------------------------------------
 	retV := c.Call(h.socket, args)
 	if len(retV) == 0 {
 		return nil, nil
@@ -261,7 +255,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]interface{
 		err = last
 		retV = retV[0 : len(retV)-1]
 	}
-	ret := make([]interface{}, len(retV))
+	ret := make([]any, len(retV))
 	for i, v := range retV {
 		ret[i] = v.Interface()
 	}

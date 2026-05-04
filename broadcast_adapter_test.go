@@ -12,18 +12,18 @@ type broadcastTestSocket struct {
 	emitErr error
 }
 
-func (s *broadcastTestSocket) Id() string                             { return s.id }
-func (s *broadcastTestSocket) Rooms() []string                        { return nil }
-func (s *broadcastTestSocket) Request() *http.Request                 { return nil }
-func (s *broadcastTestSocket) On(message string, f interface{}) error { return nil }
-func (s *broadcastTestSocket) OnAny(f interface{}) error              { return nil }
-func (s *broadcastTestSocket) Emit(message string, args ...interface{}) error {
+func (s *broadcastTestSocket) Id() string                     { return s.id }
+func (s *broadcastTestSocket) Rooms() []string                { return nil }
+func (s *broadcastTestSocket) Request() *http.Request         { return nil }
+func (s *broadcastTestSocket) On(message string, f any) error { return nil }
+func (s *broadcastTestSocket) OnAny(f any) error              { return nil }
+func (s *broadcastTestSocket) Emit(message string, args ...any) error {
 	s.emitted = append(s.emitted, message)
 	return s.emitErr
 }
 func (s *broadcastTestSocket) Join(room string) error  { return nil }
 func (s *broadcastTestSocket) Leave(room string) error { return nil }
-func (s *broadcastTestSocket) BroadcastTo(room, message string, args ...interface{}) error {
+func (s *broadcastTestSocket) BroadcastTo(room, message string, args ...any) error {
 	return nil
 }
 

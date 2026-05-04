@@ -11,7 +11,7 @@ type Namespace interface {
 	Of(name string) Namespace
 
 	// On registers the function f to handle message.
-	On(message string, f interface{}) error
+	On(message string, f any) error
 }
 
 type namespace struct {

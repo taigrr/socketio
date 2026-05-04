@@ -58,7 +58,7 @@ type packet struct {
 	Type         packetType
 	NSP          string
 	ID           int
-	Data         interface{}
+	Data         any
 	attachNumber int
 }
 

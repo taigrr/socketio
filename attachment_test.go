@@ -20,7 +20,7 @@ type HaveAttachment struct {
 }
 
 func TestEncodeAttachments(t *testing.T) {
-	var input interface{}
+	var input any
 	var target []io.Reader
 	buf1 := bytes.NewBufferString("data1")
 	buf2 := bytes.NewBufferString("data2")
@@ -53,7 +53,7 @@ func TestEncodeAttachments(t *testing.T) {
 	})
 
 	Convey("Array of attachments", t, func() {
-		input = [...]interface{}{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
+		input = [...]any{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
 		target = []io.Reader{buf1, buf2}
 
 		test()
@@ -63,7 +63,7 @@ func TestEncodeAttachments(t *testing.T) {
 	})
 
 	Convey("Slice of attachments", t, func() {
-		input = []interface{}{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
+		input = []any{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
 		target = []io.Reader{buf1, buf2}
 
 		test()
@@ -73,7 +73,7 @@ func TestEncodeAttachments(t *testing.T) {
 	})
 
 	Convey("Map of attachments", t, func() {
-		input = map[string]interface{}{"test": HaveAttachment{A: attachment1}, "testp": &HaveAttachment{A: attachment2}}
+		input = map[string]any{"test": HaveAttachment{A: attachment1}, "testp": &HaveAttachment{A: attachment2}}
 
 		attachment1.num = -1
 		attachment2.num = -1
@@ -93,7 +93,7 @@ func TestEncodeAttachments(t *testing.T) {
 	})
 
 	Convey("Encode attachment", t, func() {
-		input = map[string]interface{}{"test": HaveAttachment{A: attachment1}}
+		input = map[string]any{"test": HaveAttachment{A: attachment1}}
 
 		attachment1.num = -1
 		encodeAttachments(input)
@@ -107,7 +107,7 @@ func TestEncodeAttachments(t *testing.T) {
 
 func TestDecodeAttachments(t *testing.T) {
 	var input [][]byte
-	var v interface{}
+	var v any
 	buf1 := bytes.NewBuffer(nil)
 	buf2 := bytes.NewBuffer(nil)
 	var attachment1 *Attachment
@@ -148,7 +148,7 @@ func TestDecodeAttachments(t *testing.T) {
 		attachment1.num = 0
 		attachment2 = &Attachment{Data: buf2}
 		attachment2.num = 1
-		v = [...]interface{}{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
+		v = [...]any{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
 
 		test()
 	})
@@ -159,7 +159,7 @@ func TestDecodeAttachments(t *testing.T) {
 		attachment1.num = 0
 		attachment2 = &Attachment{Data: buf2}
 		attachment2.num = 1
-		v = []interface{}{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
+		v = []any{HaveAttachment{A: attachment1}, &HaveAttachment{A: attachment2}}
 
 		test()
 	})
@@ -170,7 +170,7 @@ func TestDecodeAttachments(t *testing.T) {
 		attachment1.num = 0
 		attachment2 = &Attachment{Data: buf2}
 		attachment2.num = 1
-		v = map[string]interface{}{"test": HaveAttachment{A: attachment1}, "testp": &HaveAttachment{A: attachment2}}
+		v = map[string]any{"test": HaveAttachment{A: attachment1}, "testp": &HaveAttachment{A: attachment2}}
 
 		test()
 	})

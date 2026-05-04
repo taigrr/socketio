@@ -8,15 +8,15 @@ import (
 
 // Socket is the socket object of socket.io.
 type Socket interface {
-	Id() string                                                  // Id returns the session id of socket.
-	Rooms() []string                                             // Rooms returns the rooms name joined now.
-	Request() *http.Request                                      // Request returns the first http request when established connection.
-	On(message string, f interface{}) error                      // On registers the function f to handle message.
-	OnAny(f interface{}) error                                   // Register a function that will get called on any message
-	Emit(message string, args ...interface{}) error              // Emit emits the message with given args.
-	Join(room string) error                                      // Join joins the room.
-	Leave(room string) error                                     // Leave leaves the room.
-	BroadcastTo(room, message string, args ...interface{}) error // BroadcastTo broadcasts the message to the room with given args.
+	Id() string                                          // Id returns the session id of socket.
+	Rooms() []string                                     // Rooms returns the rooms name joined now.
+	Request() *http.Request                              // Request returns the first http request when established connection.
+	On(message string, f any) error                      // On registers the function f to handle message.
+	OnAny(f any) error                                   // Register a function that will get called on any message
+	Emit(message string, args ...any) error              // Emit emits the message with given args.
+	Join(room string) error                              // Join joins the room.
+	Leave(room string) error                             // Leave leaves the room.
+	BroadcastTo(room, message string, args ...any) error // BroadcastTo broadcasts the message to the room with given args.
 }
 
 type socket struct {
@@ -42,7 +42,7 @@ func (s *socket) Request() *http.Request {
 	return s.conn.Request()
 }
 
-func (s *socket) Emit(message string, args ...interface{}) error {
+func (s *socket) Emit(message string, args ...any) error {
 	if err := s.socketHandler.Emit(message, args...); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (s *socket) Emit(message string, args ...interface{}) error {
 	return nil
 }
 
-func (s *socket) send(args []interface{}) error {
+func (s *socket) send(args []any) error {
 	p := packet{
 		Type: Event,
 		ID:   -1,
@@ -73,7 +73,7 @@ func (s *socket) sendConnect() error {
 	return encoder.Encode(p)
 }
 
-func (s *socket) sendID(args []interface{}) (int, error) {
+func (s *socket) sendID(args []any) (int, error) {
 	p := packet{
 		Type: Event,
 		ID:   s.id,

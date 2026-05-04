@@ -36,7 +36,7 @@ type Attachment struct {
 	num  int
 }
 
-func encodeAttachments(v interface{}) []io.Reader {
+func encodeAttachments(v any) []io.Reader {
 	index := 0
 	return encodeAttachmentValue(reflect.ValueOf(v), &index)
 }
@@ -87,7 +87,7 @@ func encodeAttachmentValue(v reflect.Value, index *int) []io.Reader {
 	return ret
 }
 
-func decodeAttachments(v interface{}, binary [][]byte) error {
+func decodeAttachments(v any, binary [][]byte) error {
 	return decodeAttachmentValue(reflect.ValueOf(v), binary)
 }
 
@@ -152,7 +152,7 @@ func decodeAttachmentValue(v reflect.Value, binary [][]byte) error {
 }
 
 func (a Attachment) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("{\"_placeholder\":true,\"num\":%d}", a.num)), nil
+	return fmt.Appendf(nil, "{\"_placeholder\":true,\"num\":%d}", a.num), nil
 }
 
 func (a *Attachment) UnmarshalJSON(b []byte) error {

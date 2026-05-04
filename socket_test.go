@@ -41,7 +41,7 @@ func TestSendIDPropagatesEncoderError(t *testing.T) {
 		socketConn := &failingConn{nextWriterErr: wantErr}
 		serverSocket := newSocket(socketConn, newBaseHandler("", newBroadcastDefault()))
 
-		id, err := serverSocket.sendID([]interface{}{"event", "payload"})
+		id, err := serverSocket.sendID([]any{"event", "payload"})
 		So(id, ShouldEqual, -1)
 		So(err, ShouldEqual, wantErr)
 		So(serverSocket.id, ShouldEqual, 1)

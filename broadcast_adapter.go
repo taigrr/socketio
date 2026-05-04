@@ -11,7 +11,7 @@ type BroadcastAdaptor interface {
 	Leave(room string, socket Socket) error
 
 	// Send will send the message with args to room. If ignore is not nil, it won't send to the socket ignore.
-	Send(ignore Socket, room, message string, args ...interface{}) error
+	Send(ignore Socket, room, message string, args ...any) error
 }
 
 // Broadcast is a set of "room" each with a set of Socket
@@ -58,7 +58,7 @@ func (b *broadcast) Leave(room string, socket Socket) error {
 
 // Perform a brodcast send to all the sockets in a "room" except the ignored socket.
 // Brodcast send to all with ignore == nil.
-func (b *broadcast) Send(ignore Socket, room, message string, args ...interface{}) error {
+func (b *broadcast) Send(ignore Socket, room, message string, args ...any) error {
 	b.broadcastLock.RLock()
 	defer b.broadcastLock.RUnlock()
 	sockets := b.roomSet[room]
@@ -73,35 +73,27 @@ func (b *broadcast) Send(ignore Socket, room, message string, args ...interface{
 	return nil
 }
 
-// return the number of connections in a specified room
-func (b *broadcast) NumberInRoom(room string) (rv int, err error) {
+// NumberInRoom returns the number of connections in a specified room.
+func (b *broadcast) NumberInRoom(room string) (int, error) {
 	b.broadcastLock.RLock()
 	defer b.broadcastLock.RUnlock()
-	sockets := b.roomSet[room]
-	rv = 0
-	for range sockets {
-		rv++
-	}
-	return
+	return len(b.roomSet[room]), nil
 }
 
-// return the number of rooms
-func (b *broadcast) NumberOfRooms(room string) (rv int, err error) {
+// NumberOfRooms returns the number of rooms.
+func (b *broadcast) NumberOfRooms(room string) (int, error) {
 	b.broadcastLock.RLock()
 	defer b.broadcastLock.RUnlock()
-	rv = 0
-	for range b.roomSet {
-		rv++
-	}
-	return
+	return len(b.roomSet), nil
 }
 
-// return the names of the rooms as a slice of strings
-func (b *broadcast) ListOfRooms(room string) (rv []string, err error) {
+// ListOfRooms returns the names of the rooms as a slice of strings.
+func (b *broadcast) ListOfRooms(room string) ([]string, error) {
 	b.broadcastLock.RLock()
 	defer b.broadcastLock.RUnlock()
+	rv := make([]string, 0, len(b.roomSet))
 	for room := range b.roomSet {
 		rv = append(rv, room)
 	}
-	return
+	return rv, nil
 }

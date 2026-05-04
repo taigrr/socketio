@@ -12,7 +12,7 @@ type caller struct {
 	NeedSocket bool
 }
 
-func newCaller(f interface{}) (*caller, error) {
+func newCaller(f any) (*caller, error) {
 	fv := reflect.ValueOf(f)
 	if fv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("f is not func")
@@ -39,8 +39,8 @@ func newCaller(f interface{}) (*caller, error) {
 	}, nil
 }
 
-func (c *caller) GetArgs() []interface{} {
-	ret := make([]interface{}, len(c.Args))
+func (c *caller) GetArgs() []any {
+	ret := make([]any, len(c.Args))
 	for i, argT := range c.Args {
 		if argT.Kind() == reflect.Ptr {
 			argT = argT.Elem()
@@ -51,7 +51,7 @@ func (c *caller) GetArgs() []interface{} {
 	return ret
 }
 
-func (c *caller) Call(so Socket, args []interface{}) []reflect.Value {
+func (c *caller) Call(so Socket, args []any) []reflect.Value {
 	var a []reflect.Value
 	diff := 0
 	if c.NeedSocket {
@@ -64,7 +64,7 @@ func (c *caller) Call(so Socket, args []interface{}) []reflect.Value {
 
 	// Issue 95 from original.
 	if len(args) != len(c.Args) {
-		return []reflect.Value{reflect.ValueOf([]interface{}{}), reflect.ValueOf(errors.New("arguments do not match"))}
+		return []reflect.Value{reflect.ValueOf([]any{}), reflect.ValueOf(errors.New("arguments do not match"))}
 	}
 
 	for i, arg := range args {

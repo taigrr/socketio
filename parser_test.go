@@ -30,7 +30,7 @@ func TestPacketType(t *testing.T) {
 
 func TestParser(t *testing.T) {
 	p := packet{}
-	var decodeData interface{}
+	var decodeData any
 	output := ""
 	message := ""
 
@@ -118,10 +118,10 @@ func TestParser(t *testing.T) {
 			Type: Event,
 			ID:   -1,
 			NSP:  "/abc",
-			Data: []interface{}{"numbers", 1, 2, 3},
+			Data: []any{"numbers", 1, 2, 3},
 		}
 		var i1, i2, i3 int
-		decodeData = &[]interface{}{&i1, &i2, &i3}
+		decodeData = &[]any{&i1, &i2, &i3}
 		output = "2/abc,[\"numbers\",1,2,3]"
 		message = "numbers"
 
@@ -137,10 +137,10 @@ func TestParser(t *testing.T) {
 			Type: Event,
 			ID:   1,
 			NSP:  "/abc",
-			Data: []interface{}{"numbers", 1, 2, 3},
+			Data: []any{"numbers", 1, 2, 3},
 		}
 		var i1, i2, i3 int
-		decodeData = &[]interface{}{&i1, &i2, &i3}
+		decodeData = &[]any{&i1, &i2, &i3}
 		output = "2/abc,1[\"numbers\",1,2,3]"
 		message = "numbers"
 
@@ -156,10 +156,10 @@ func TestParser(t *testing.T) {
 			Type: Ack,
 			ID:   1,
 			NSP:  "/abc",
-			Data: []interface{}{1, 2, 3},
+			Data: []any{1, 2, 3},
 		}
 		var i1, i2, i3 int
-		decodeData = &[]interface{}{&i1, &i2, &i3}
+		decodeData = &[]any{&i1, &i2, &i3}
 		output = "3/abc,1[1,2,3]"
 		message = ""
 
@@ -175,10 +175,10 @@ func TestParser(t *testing.T) {
 			Type: Event,
 			ID:   1,
 			NSP:  "/abc",
-			Data: []interface{}{"binary", &Attachment{Data: bytes.NewBufferString("data")}},
+			Data: []any{"binary", &Attachment{Data: bytes.NewBufferString("data")}},
 		}
 		buf := bytes.NewBuffer(nil)
-		decodeData = &[]interface{}{&Attachment{Data: buf}}
+		decodeData = &[]any{&Attachment{Data: buf}}
 		output = `51-/abc,1["binary",{"_placeholder":true,"num":0}]`
 		message = "binary"
 

@@ -78,7 +78,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Server level broadcasts function.
-func (s *Server) BroadcastTo(room, message string, args ...interface{}) {
+func (s *Server) BroadcastTo(room, message string, args ...any) {
 	s.namespace.BroadcastTo(room, message, args...)
 }
 
