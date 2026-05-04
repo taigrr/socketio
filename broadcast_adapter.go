@@ -66,7 +66,9 @@ func (b *broadcast) Send(ignore Socket, room, message string, args ...interface{
 		if ignore != nil && ignore.Id() == id {
 			continue
 		}
-		s.Emit(message, args...)
+		if err := s.Emit(message, args...); err != nil {
+			return err
+		}
 	}
 	return nil
 }
