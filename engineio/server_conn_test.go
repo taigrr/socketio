@@ -52,6 +52,17 @@ func (f *FakeServer) onClose(sid string) {
 	f.closed[sid] = f.closed[sid] + 1
 }
 
+func waitForUpgrade(conn *serverConn) bool {
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if conn.getUpgrade() != nil {
+			return true
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+	return false
+}
+
 func TestConn(t *testing.T) {
 	Convey("Create conn", t, func() {
 		Convey("without transport", func() {
@@ -164,7 +175,7 @@ func TestConn(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(conn.getCurrent(), ShouldNotBeNil)
-			So(conn.getUpgrade(), ShouldNotBeNil)
+			So(waitForUpgrade(conn), ShouldBeTrue)
 
 			encoder, err := wc.NextWriter(message.MessageBinary, parser.PING)
 			So(err, ShouldBeNil)
@@ -261,7 +272,7 @@ func TestConn(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(conn.getCurrent(), ShouldNotBeNil)
-			So(conn.getUpgrade(), ShouldNotBeNil)
+			So(waitForUpgrade(conn), ShouldBeTrue)
 
 			encoder, err := wc.NextWriter(message.MessageBinary, parser.PING)
 			So(err, ShouldBeNil)
