@@ -1,6 +1,7 @@
 package socketio
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"maps"
@@ -182,12 +183,13 @@ func (h *socketHandler) LeaveAll() error {
 	h.rooms = make(map[string]struct{})
 	h.lock.Unlock()
 
+	var errs []error
 	for _, room := range rooms {
 		if err := h.broadcast.Leave(h.broadcastName(room), h.socket); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (h *baseHandler) BroadcastTo(room, message string, args ...any) error {
@@ -231,6 +233,13 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 	}
 
 	_ = xc
+	if c == nil {
+		// The message is only registered through the extended handler API
+		// (xEvents), which is not yet wired into this dispatch path. Avoid a
+		// nil dereference and treat it as unhandled.
+		decoder.Close()
+		return nil, nil
+	}
 	args := c.GetArgs()
 	olen := len(args)
 	if olen > 0 {

@@ -1,6 +1,9 @@
 package socketio
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 // BroadcastAdaptor is the adaptor to handle broadcast.
 type BroadcastAdaptor interface {
@@ -60,17 +63,25 @@ func (b *broadcast) Leave(room string, socket Socket) error {
 // Brodcast send to all with ignore == nil.
 func (b *broadcast) Send(ignore Socket, room, message string, args ...any) error {
 	b.broadcastLock.RLock()
-	defer b.broadcastLock.RUnlock()
-	sockets := b.roomSet[room]
-	for id, s := range sockets {
+	sockets := make([]Socket, 0, len(b.roomSet[room]))
+	for id, s := range b.roomSet[room] {
 		if ignore != nil && ignore.Id() == id {
 			continue
 		}
+		sockets = append(sockets, s)
+	}
+	b.broadcastLock.RUnlock()
+
+	// Emit outside the lock so a slow or blocked client cannot stall
+	// Join/Leave, and so one failing socket does not abort delivery to the
+	// rest of the room. Per-socket failures are aggregated and returned.
+	var errs []error
+	for _, s := range sockets {
 		if err := s.Emit(message, args...); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // NumberInRoom returns the number of connections in a specified room.
