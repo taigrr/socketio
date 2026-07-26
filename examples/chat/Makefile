@@ -4,5 +4,5 @@ all:
 
 run:
 	go build
-	./chat --debug socketio.Db1
+	./chat
 

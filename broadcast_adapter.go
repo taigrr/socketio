@@ -45,6 +45,7 @@ func (b *broadcast) Join(room string, socket Socket) error {
 // Disconnect from a room
 func (b *broadcast) Leave(room string, socket Socket) error {
 	b.broadcastLock.Lock()
+	defer b.broadcastLock.Unlock()
 	sockets, ok := b.roomSet[room]
 	if !ok {
 		return nil
@@ -55,7 +56,6 @@ func (b *broadcast) Leave(room string, socket Socket) error {
 	} else {
 		b.roomSet[room] = sockets
 	}
-	b.broadcastLock.Unlock()
 	return nil
 }
 

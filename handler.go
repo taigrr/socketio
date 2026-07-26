@@ -213,8 +213,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 		message = "disconnect"
 	case Error:
 		message = "error"
-	case Ack:
-	case BinaryAck:
+	case Ack, BinaryAck:
 		return nil, h.onAck(packet.ID, decoder, packet)
 	default:
 		message = decoder.Message()
