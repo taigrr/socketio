@@ -36,16 +36,21 @@ func (c *failingConn) NextWriter(engineio.MessageType) (io.WriteCloser, error) {
 	return nil, c.nextWriterErr
 }
 
-func TestSendIDPropagatesEncoderError(t *testing.T) {
-	Convey("sendID returns encoder errors and preserves the ack counter", t, func() {
+func TestSendAckRollsBackOnEncoderError(t *testing.T) {
+	Convey("sendAck rolls back registration and advances the counter on write error", t, func() {
 		wantErr := errors.New("writer unavailable")
 		socketConn := &failingConn{nextWriterErr: wantErr}
 		serverSocket := newSocket(socketConn, newBaseHandler("", newBroadcastDefault()))
 
-		id, err := serverSocket.sendID([]any{"event", "payload"})
-		So(id, ShouldEqual, -1)
+		registered, unregistered := -1, -1
+		err := serverSocket.sendAck([]any{"event", "payload"},
+			func(id int) { registered = id },
+			func(id int) { unregistered = id },
+		)
 		So(err, ShouldEqual, wantErr)
 		So(serverSocket.id, ShouldEqual, 1)
+		So(registered, ShouldEqual, 0)
+		So(unregistered, ShouldEqual, 0)
 	})
 }
 

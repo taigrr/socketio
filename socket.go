@@ -83,24 +83,32 @@ func (s *socket) sendConnect() error {
 	return s.sendPacket(p)
 }
 
-func (s *socket) sendID(args []any) (int, error) {
+// sendAck writes an event packet that expects an acknowledgement. The ack id
+// is allocated, the callback registered via register, and the frame written
+// while holding writeLock, so the callback is always registered before the
+// frame can be observed (and acked) by the peer. On write failure the
+// registration is rolled back via unregister.
+func (s *socket) sendAck(args []any, register func(id int), unregister func(id int)) error {
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
-	p := packet{
-		Type: Event,
-		ID:   s.id,
-		NSP:  s.namespace,
-		Data: args,
-	}
+	id := s.id
 	s.id++
 	if s.id < 0 {
 		s.id = 0
 	}
+	register(id)
+	p := packet{
+		Type: Event,
+		ID:   id,
+		NSP:  s.namespace,
+		Data: args,
+	}
 	encoder := newEncoder(s.conn)
 	if err := encoder.Encode(p); err != nil {
-		return -1, err
+		unregister(id)
+		return err
 	}
-	return p.ID, nil
+	return nil
 }
 
 func (s *socket) loop() error {

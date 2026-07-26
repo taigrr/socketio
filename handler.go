@@ -104,14 +104,18 @@ func (h *socketHandler) Emit(message string, args ...any) error {
 	}
 	args = append([]any{message}, args...)
 	if c != nil {
-		id, err := h.socket.sendID(args)
-		if err != nil {
-			return err
-		}
-		h.lock.Lock()
-		h.acks[id] = c
-		h.lock.Unlock()
-		return nil
+		return h.socket.sendAck(args,
+			func(id int) {
+				h.lock.Lock()
+				h.acks[id] = c
+				h.lock.Unlock()
+			},
+			func(id int) {
+				h.lock.Lock()
+				delete(h.acks, id)
+				h.lock.Unlock()
+			},
+		)
 	}
 	return h.socket.send(args)
 }
