@@ -58,6 +58,19 @@ func main() {
 }
 ```
 
+## WebSocket origin policy
+
+By default the WebSocket transport enforces a same-origin policy: a browser
+connection is only upgraded when its `Origin` matches the request `Host`. This
+guards against Cross-Site WebSocket Hijacking. To intentionally allow
+cross-origin connections, configure the exported upgrader before serving:
+
+```go
+import "github.com/taigrr/socketio/engineio/websocket"
+
+websocket.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+```
+
 ## License
 
 3-clause BSD — see [LICENSE](./LICENSE) for details.

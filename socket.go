@@ -2,6 +2,7 @@ package socketio
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/taigrr/socketio/engineio"
 )
@@ -24,6 +25,7 @@ type socket struct {
 	conn      engineio.Conn
 	namespace string
 	id        int
+	writeLock sync.Mutex
 }
 
 func newSocket(conn engineio.Conn, base *baseHandler) *socket {
@@ -52,6 +54,16 @@ func (s *socket) Emit(message string, args ...any) error {
 	return nil
 }
 
+// sendPacket serializes writes to the underlying connection so concurrent
+// emits (and the read loop's acks) cannot interleave frames. It does not touch
+// the socket handler lock, so a slow client write never blocks event dispatch.
+func (s *socket) sendPacket(p packet) error {
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+	encoder := newEncoder(s.conn)
+	return encoder.Encode(p)
+}
+
 func (s *socket) send(args []any) error {
 	p := packet{
 		Type: Event,
@@ -59,8 +71,7 @@ func (s *socket) send(args []any) error {
 		NSP:  s.namespace,
 		Data: args,
 	}
-	encoder := newEncoder(s.conn)
-	return encoder.Encode(p)
+	return s.sendPacket(p)
 }
 
 func (s *socket) sendConnect() error {
@@ -69,11 +80,12 @@ func (s *socket) sendConnect() error {
 		ID:   -1,
 		NSP:  s.namespace,
 	}
-	encoder := newEncoder(s.conn)
-	return encoder.Encode(p)
+	return s.sendPacket(p)
 }
 
 func (s *socket) sendID(args []any) (int, error) {
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
 	p := packet{
 		Type: Event,
 		ID:   s.id,
@@ -85,8 +97,7 @@ func (s *socket) sendID(args []any) (int, error) {
 		s.id = 0
 	}
 	encoder := newEncoder(s.conn)
-	err := encoder.Encode(p)
-	if err != nil {
+	if err := encoder.Encode(p); err != nil {
 		return -1, err
 	}
 	return p.ID, nil
@@ -106,8 +117,7 @@ func (s *socket) loop() error {
 		Type: Connect,
 		ID:   -1,
 	}
-	encoder := newEncoder(s.conn)
-	if err := encoder.Encode(p); err != nil {
+	if err := s.sendPacket(p); err != nil {
 		return err
 	}
 	s.onPacket(nil, &p)
@@ -135,8 +145,7 @@ func (s *socket) loop() error {
 					NSP:  s.namespace,
 					Data: ret,
 				}
-				encoder := newEncoder(s.conn)
-				if err := encoder.Encode(p); err != nil {
+				if err := s.sendPacket(p); err != nil {
 					return err
 				}
 			}

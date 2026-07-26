@@ -9,28 +9,20 @@ import (
 	"sync"
 )
 
-// PJS - could have it return more than just an error, if "rmsg" and "rbody" - then emit response?
-// that makes it more like a RPC - call a func get back a response
-type EventHandlerFunc func(so *Socket, message string, args [][]byte) error
-
 type baseHandler struct {
-	events     map[string]*caller
-	allEvents  []*caller
-	xEvents    map[string]EventHandlerFunc
-	xAllEvents []EventHandlerFunc
-	name       string
-	broadcast  BroadcastAdaptor
-	lock       sync.RWMutex
+	events    map[string]*caller
+	allEvents []*caller
+	name      string
+	broadcast BroadcastAdaptor
+	lock      sync.RWMutex
 }
 
 func newBaseHandler(name string, broadcast BroadcastAdaptor) *baseHandler {
 	return &baseHandler{
-		events:     make(map[string]*caller),
-		allEvents:  make([]*caller, 0, 5),
-		xEvents:    make(map[string]EventHandlerFunc),
-		xAllEvents: make([]EventHandlerFunc, 0, 5),
-		name:       name,
-		broadcast:  broadcast,
+		events:    make(map[string]*caller),
+		allEvents: make([]*caller, 0, 5),
+		name:      name,
+		broadcast: broadcast,
 	}
 }
 
@@ -42,20 +34,6 @@ func (h *baseHandler) On(message string, f any) error {
 	}
 	h.lock.Lock()
 	h.events[message] = c
-	h.lock.Unlock()
-	return nil
-}
-
-func (h *baseHandler) Handle(message string, f EventHandlerFunc) error {
-	h.lock.Lock()
-	h.xEvents[message] = f
-	h.lock.Unlock()
-	return nil
-}
-
-func (h *baseHandler) HandleAny(f EventHandlerFunc) error {
-	h.lock.Lock()
-	h.xAllEvents = append(h.xAllEvents, f)
 	h.lock.Unlock()
 	return nil
 }
@@ -93,21 +71,17 @@ type socketHandler struct {
 func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
 	events := make(map[string]*caller)
 	allEvents := make([]*caller, 0, len(base.allEvents))
-	xEvents := make(map[string]EventHandlerFunc)
-	xAllEvents := make([]EventHandlerFunc, 0, len(base.xAllEvents))
 	base.lock.Lock()
 	maps.Copy(events, base.events)
 	allEvents = append(allEvents, base.allEvents...)
-	maps.Copy(xEvents, base.xEvents)
-	xAllEvents = append(xAllEvents, base.xAllEvents...)
+	name := base.name
 	base.lock.Unlock()
 	return &socketHandler{
 		baseHandler: &baseHandler{
-			events:     events,
-			allEvents:  allEvents,
-			xEvents:    xEvents,
-			xAllEvents: xAllEvents,
-			broadcast:  base.broadcast,
+			events:    events,
+			allEvents: allEvents,
+			name:      name,
+			broadcast: base.broadcast,
 		},
 		acks:   make(map[int]*caller),
 		socket: s,
@@ -129,14 +103,14 @@ func (h *socketHandler) Emit(message string, args ...any) error {
 		}
 	}
 	args = append([]any{message}, args...)
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	if c != nil {
 		id, err := h.socket.sendID(args)
 		if err != nil {
 			return err
 		}
+		h.lock.Lock()
 		h.acks[id] = c
+		h.lock.Unlock()
 		return nil
 	}
 	return h.socket.send(args)
@@ -220,25 +194,17 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 	}
 	h.lock.RLock()
 	c, ok := h.events[message]
-	xc, ok1 := h.xEvents[message]
 	h.lock.RUnlock()
 
-	if !ok && !ok1 {
-		// If the message is not recognized by the server, the decoder.currentCloser
-		// needs to be closed otherwise the server will be stuck until the e xyzzy
-		log.Printf("Error: %s was not found in h.events\n", message)
+	if !ok {
+		// The message has no registered handler. Close the decoder so its
+		// underlying frame is released; otherwise the read loop can stall
+		// waiting on an open reader.
+		log.Printf("socketio: no handler registered for message %q", message)
 		decoder.Close()
 		return nil, nil
 	}
 
-	_ = xc
-	if c == nil {
-		// The message is only registered through the extended handler API
-		// (xEvents), which is not yet wired into this dispatch path. Avoid a
-		// nil dereference and treat it as unhandled.
-		decoder.Close()
-		return nil, nil
-	}
 	args := c.GetArgs()
 	olen := len(args)
 	if olen > 0 {

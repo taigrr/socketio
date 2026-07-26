@@ -2,44 +2,32 @@ package socketio
 
 import "testing"
 
-func TestBaseHandlerHandleInitializesExtendedHandlers(t *testing.T) {
-	handler := newBaseHandler("/", newBroadcastDefault())
-
-	called := false
-	if err := handler.Handle("ping", func(_ *Socket, message string, _ [][]byte) error {
-		called = message == "ping"
-		return nil
-	}); err != nil {
-		t.Fatalf("Handle() error = %v", err)
+func TestNewSocketHandlerCopiesEventHandlers(t *testing.T) {
+	base := newBaseHandler("/chat", newBroadcastDefault())
+	if err := base.On("ping", func() {}); err != nil {
+		t.Fatalf("On() error = %v", err)
 	}
-
-	if _, ok := handler.xEvents["ping"]; !ok {
-		t.Fatal("expected extended handler to be registered")
-	}
-	if called {
-		t.Fatal("handler should not be invoked during registration")
-	}
-}
-
-func TestNewSocketHandlerCopiesExtendedHandlers(t *testing.T) {
-	base := newBaseHandler("/", newBroadcastDefault())
-	base.xAllEvents = append(base.xAllEvents, func(_ *Socket, _ string, _ [][]byte) error { return nil })
-
-	if err := base.Handle("ping", func(_ *Socket, message string, _ [][]byte) error {
-		if message != "ping" {
-			t.Fatalf("unexpected message %q", message)
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("Handle() error = %v", err)
+	if err := base.OnAny(func() {}); err != nil {
+		t.Fatalf("OnAny() error = %v", err)
 	}
 
 	handler := newSocketHandler(&socket{}, base)
 
-	if _, ok := handler.xEvents["ping"]; !ok {
-		t.Fatal("expected socket handler to copy extended handlers")
+	if _, ok := handler.events["ping"]; !ok {
+		t.Fatal("expected socket handler to copy registered events")
 	}
-	if len(handler.xAllEvents) != 1 {
-		t.Fatalf("expected 1 xAllEvents handler, got %d", len(handler.xAllEvents))
+	if len(handler.allEvents) != 1 {
+		t.Fatalf("expected 1 allEvents handler, got %d", len(handler.allEvents))
+	}
+	if handler.name != "/chat" {
+		t.Fatalf("expected namespace name to be copied, got %q", handler.name)
+	}
+
+	// Mutating the copy must not affect the base handler.
+	if err := handler.On("pong", func() {}); err != nil {
+		t.Fatalf("On() error = %v", err)
+	}
+	if _, ok := base.events["pong"]; ok {
+		t.Fatal("socket handler events should be independent of base handler")
 	}
 }

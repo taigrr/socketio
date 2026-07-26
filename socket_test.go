@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/taigrr/socketio/engineio"
 
@@ -46,4 +47,51 @@ func TestSendIDPropagatesEncoderError(t *testing.T) {
 		So(err, ShouldEqual, wantErr)
 		So(serverSocket.id, ShouldEqual, 1)
 	})
+}
+
+type nopWriteCloser struct{ io.Writer }
+
+func (nopWriteCloser) Close() error { return nil }
+
+type discardConn struct{}
+
+func (discardConn) Id() string             { return "test" }
+func (discardConn) Request() *http.Request { return nil }
+func (discardConn) Close() error           { return nil }
+func (discardConn) NextReader() (engineio.MessageType, io.ReadCloser, error) {
+	return engineio.MessageText, nil, io.EOF
+}
+
+func (discardConn) NextWriter(engineio.MessageType) (io.WriteCloser, error) {
+	return nopWriteCloser{io.Discard}, nil
+}
+
+func TestOnAckCallbackMayReenterSocket(t *testing.T) {
+	// An ack callback that itself performs socket operations (Emit/Join)
+	// must not deadlock: onAck must release the handler lock before invoking
+	// the callback, and Emit must not hold the handler lock across the write.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		serverSocket := newSocket(discardConn{}, newBaseHandler("", newBroadcastDefault()))
+		c, err := newCaller(func(so Socket) {
+			_ = so.Emit("reentrant")
+			_ = so.Join("room")
+			_ = so.Rooms()
+		})
+		if err != nil {
+			t.Errorf("newCaller: %v", err)
+			return
+		}
+		serverSocket.acks[7] = c
+		if err := serverSocket.onAck(7, newDecoder(nil), &packet{Type: Ack, ID: 7}); err != nil {
+			t.Errorf("onAck: %v", err)
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("onAck deadlocked when its callback re-entered the socket")
+	}
 }

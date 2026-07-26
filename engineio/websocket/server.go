@@ -16,30 +16,25 @@ type Server struct {
 	conn     *websocket.Conn
 }
 
-/*
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool { // Origin - PJS - Check
-		return true
-		// allow all connections by default - to do a test - a public site will need to have a "check-origin" policy
-		// that is based on users inputing the site that they will be using - that will get "pushed" and that will be valid for
-		// the origin.
-		//
-		// See data/go-chat-model.sql
-		//
-	},
-}
-*/
-
-var upgrader = websocket.Upgrader{
+// Upgrader is the gorilla/websocket upgrader used to promote incoming HTTP
+// requests to WebSocket connections. It is exported so applications can tune
+// buffer sizes, subprotocols, compression, and—most importantly—the
+// CheckOrigin policy.
+//
+// By default CheckOrigin is nil, which makes gorilla/websocket enforce a
+// same-origin policy (the request Origin host must match the Host header).
+// This is the safe default and prevents Cross-Site WebSocket Hijacking. To
+// intentionally accept cross-origin connections, set a custom CheckOrigin
+// before serving, e.g.:
+//
+//	websocket.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+var Upgrader = websocket.Upgrader{
 	ReadBufferSize:  10240,
 	WriteBufferSize: 10240,
-	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 func NewServer(w http.ResponseWriter, r *http.Request, callback transport.Callback) (transport.Server, error) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
