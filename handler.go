@@ -273,12 +273,14 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 
 func (h *socketHandler) onAck(id int, decoder *decoder, packet *packet) error {
 	h.lock.Lock()
-	defer h.lock.Unlock()
 	c, ok := h.acks[id]
+	if ok {
+		delete(h.acks, id)
+	}
+	h.lock.Unlock()
 	if !ok {
 		return nil
 	}
-	delete(h.acks, id)
 
 	args := c.GetArgs()
 	packet.Data = &args
