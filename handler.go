@@ -39,7 +39,11 @@ func (h *baseHandler) On(message string, f any) error {
 	return nil
 }
 
-// On registers the function f to handle ANY message.
+// OnAny registers f to be called for every application event, in addition to
+// any handler registered via On for that specific message. Handlers registered
+// with OnAny receive the same decoded arguments as On handlers but do not
+// contribute to the ack response, and they do not fire for the synthetic
+// connection/disconnect/error lifecycle messages.
 func (h *baseHandler) OnAny(f any) error {
 	c, err := newCaller(f)
 	if err != nil {
@@ -291,12 +295,23 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 	default:
 		message = decoder.Message()
 	}
+
+	// OnAny listeners observe application events only, matching socket.io's
+	// onAny semantics (they do not fire for the synthetic connection/
+	// disconnect/error lifecycle messages).
+	isAppEvent := packet.Type == Event || packet.Type == BinaryEvent
+
 	h.lock.RLock()
-	c, ok := h.events[message]
+	c, hasSpecific := h.events[message]
+	var anyCallers []*caller
+	if isAppEvent && len(h.allEvents) > 0 {
+		anyCallers = make([]*caller, len(h.allEvents))
+		copy(anyCallers, h.allEvents)
+	}
 	h.lock.RUnlock()
 
-	if !ok {
-		// The message has no registered handler. Close the decoder so its
+	if !hasSpecific && len(anyCallers) == 0 {
+		// Nothing is listening for this message. Close the decoder so its
 		// underlying frame is released; otherwise the read loop can stall
 		// waiting on an open reader.
 		log.Printf("socketio: no handler registered for message %q", message)
@@ -304,18 +319,27 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 		return nil, nil
 	}
 
-	args := c.GetArgs()
-	olen := len(args)
-	if olen > 0 {
-		packet.Data = &args
-		if err := decoder.DecodeData(packet); err != nil {
-			return nil, err
-		}
+	// Read the payload once; it is applied independently to each caller so a
+	// single-use frame stream is never consumed more than once.
+	data, err := decoder.ReadData(packet)
+	if err != nil {
+		return nil, err
 	}
 
-	// Pad out args to olen
-	for i := len(args); i < olen; i++ {
-		args = append(args, nil)
+	// OnAny handlers observe the event; their return values are not used for
+	// the ack response, and neither a decode failure nor a panic in one
+	// observer must abort the primary handler or tear down the socket.
+	for _, ac := range anyCallers {
+		h.callObserver(ac, message, data)
+	}
+
+	if !hasSpecific {
+		return nil, nil
+	}
+
+	args, err := data.applyArgs(c)
+	if err != nil {
+		return nil, err
 	}
 
 	retV := c.Call(h.socket, args)
@@ -323,9 +347,9 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 		return nil, nil
 	}
 
-	var err error
+	var retErr error
 	if last, ok := retV[len(retV)-1].Interface().(error); ok {
-		err = last
+		retErr = last
 		retV = retV[0 : len(retV)-1]
 	}
 	ret := make([]any, len(retV))
@@ -333,7 +357,25 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 		ret[i] = v.Interface()
 	}
 
-	return ret, err
+	return ret, retErr
+}
+
+// callObserver decodes the buffered payload for an OnAny handler and invokes
+// it, recovering from any panic (during decode or the call itself) so a buggy
+// or mistyped observer cannot abort the primary handler or tear down the
+// socket. Decode errors are logged and skipped.
+func (h *socketHandler) callObserver(c *caller, message string, data *decodedData) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("socketio: recovered from panic in OnAny handler for %q: %v", message, r)
+		}
+	}()
+	args, err := data.applyArgs(c)
+	if err != nil {
+		log.Printf("socketio: skipping OnAny handler for %q: %v", message, err)
+		return
+	}
+	c.Call(h.socket, args)
 }
 
 func (h *socketHandler) onAck(id int, decoder *decoder, packet *packet) error {

@@ -316,6 +316,69 @@ func (d *decoder) DecodeData(v *packet) error {
 	return nil
 }
 
+// decodedData is a packet payload buffered so it can be applied to more than
+// one caller (for example a specific event handler plus any OnAny handlers).
+// The argument JSON array and any binary attachments are read from their
+// single-use frame streams exactly once; applyArgs then decodes them into each
+// caller's own typed argument slice.
+type decodedData struct {
+	rawArgs  []byte
+	binary   [][]byte
+	isBinary bool
+}
+
+// ReadData consumes the packet payload (and, for binary packets, its
+// attachment frames) exactly once and buffers it for repeated application via
+// (*decodedData).applyArgs. It closes the underlying stream like DecodeData and
+// returns a nil *decodedData when there is nothing to read.
+func (d *decoder) ReadData(v *packet) (*decodedData, error) {
+	if d == nil || d.current == nil {
+		return nil, nil
+	}
+	defer d.Close()
+	raw, err := io.ReadAll(d.current)
+	if err != nil {
+		return nil, err
+	}
+	dd := &decodedData{rawArgs: raw}
+	if v.Type == BinaryEvent || v.Type == BinaryAck {
+		binary, err := d.decodeBinary(v.attachNumber)
+		if err != nil {
+			return nil, err
+		}
+		dd.binary = binary
+		dd.isBinary = true
+		v.Type -= BinaryEvent - Event
+	}
+	return dd, nil
+}
+
+// applyArgs decodes the buffered payload into a fresh set of typed arguments
+// for c, padding with nils to the caller's expected arity (mirroring the
+// single-caller DecodeData path). A nil receiver yields the caller's zeroed
+// args, so it is safe to call when there was no payload.
+func (dd *decodedData) applyArgs(c *caller) ([]any, error) {
+	args := c.GetArgs()
+	olen := len(args)
+	if olen > 0 && dd != nil && len(dd.rawArgs) > 0 {
+		// Use a streaming decoder (rather than json.Unmarshal) so, like the
+		// original single-caller DecodeData path, exactly one JSON value is
+		// read and any trailing bytes are ignored.
+		if err := json.NewDecoder(bytes.NewReader(dd.rawArgs)).Decode(&args); err != nil {
+			return nil, err
+		}
+		if dd.isBinary {
+			if err := decodeAttachments(&args, dd.binary); err != nil {
+				return nil, err
+			}
+		}
+	}
+	for i := len(args); i < olen; i++ {
+		args = append(args, nil)
+	}
+	return args, nil
+}
+
 func (d *decoder) decodeBinary(num int) ([][]byte, error) {
 	ret := make([][]byte, num)
 	for i := 0; i < num; i++ {

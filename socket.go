@@ -13,7 +13,7 @@ type Socket interface {
 	Rooms() []string                                     // Rooms returns the rooms name joined now.
 	Request() *http.Request                              // Request returns the first http request when established connection.
 	On(message string, f any) error                      // On registers the function f to handle message.
-	OnAny(f any) error                                   // Register a function that will get called on any message
+	OnAny(f any) error                                   // OnAny registers f to be called for every application event.
 	Emit(message string, args ...any) error              // Emit emits the message with given args.
 	Join(room string) error                              // Join joins the room.
 	Leave(room string) error                             // Leave leaves the room.
