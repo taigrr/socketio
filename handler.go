@@ -279,6 +279,9 @@ func (h *socketHandler) onAck(id int, decoder *decoder, packet *packet) error {
 	}
 	h.lock.Unlock()
 	if !ok {
+		// No handler is waiting on this ack id; close the decoder so the
+		// read loop does not stall on an open frame.
+		decoder.Close()
 		return nil
 	}
 
