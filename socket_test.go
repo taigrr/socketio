@@ -43,14 +43,17 @@ func TestSendAckRollsBackOnEncoderError(t *testing.T) {
 		serverSocket := newSocket(socketConn, newBaseHandler("", newBroadcastDefault()))
 
 		registered, unregistered := -1, -1
+		committed := false
 		err := serverSocket.sendAck([]any{"event", "payload"},
 			func(id int) { registered = id },
 			func(id int) { unregistered = id },
+			func() { committed = true },
 		)
 		So(err, ShouldEqual, wantErr)
 		So(serverSocket.id, ShouldEqual, 1)
 		So(registered, ShouldEqual, 0)
 		So(unregistered, ShouldEqual, 0)
+		So(committed, ShouldBeFalse)
 	})
 }
 

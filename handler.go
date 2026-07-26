@@ -7,6 +7,7 @@ import (
 	"maps"
 	"reflect"
 	"sync"
+	"time"
 )
 
 type baseHandler struct {
@@ -61,11 +62,112 @@ func (h *baseHandler) PrintEventsRespondedTo() {
 	fmt.Printf("\n")
 }
 
+// maxOutstandingAcks caps how many un-acknowledged emit callbacks a single
+// socket may have registered at once. A peer that never sends ack responses
+// (or a server that emits acks faster than they are answered) would otherwise
+// grow the acks map without bound, exhausting memory. When the cap is
+// exceeded the oldest outstanding callbacks are evicted (they will never fire).
+const maxOutstandingAcks = 10000
+
 type socketHandler struct {
 	*baseHandler
-	acks   map[int]*caller
-	socket *socket
-	rooms  map[string]struct{}
+	acks     map[int]*caller
+	ackOrder []int // ids in insertion order; may hold ids already taken/evicted
+	socket   *socket
+	rooms    map[string]struct{}
+
+	lastAckEvictLog time.Time
+}
+
+// registerAck records the ack callback for id. The cap is not enforced here so
+// that a subsequent send failure (rolled back via unregisterAck) cannot cause
+// an unrelated, still-valid callback to be evicted; commitAck enforces the cap
+// once the frame has actually been written.
+func (h *socketHandler) registerAck(id int, c *caller) {
+	h.lock.Lock()
+	h.acks[id] = c
+	h.ackOrder = append(h.ackOrder, id)
+	h.lock.Unlock()
+}
+
+// unregisterAck removes a pending ack callback by id (used to roll back a
+// failed send). Because sendAck holds writeLock across register→encode→
+// unregister, the rolled-back id is always the most recently appended entry,
+// so it is popped from ackOrder here; otherwise a stream of failing sends
+// (which never reach commitAck) would grow ackOrder without bound.
+func (h *socketHandler) unregisterAck(id int) {
+	h.lock.Lock()
+	delete(h.acks, id)
+	if n := len(h.ackOrder); n > 0 && h.ackOrder[n-1] == id {
+		h.ackOrder = h.ackOrder[:n-1]
+	}
+	h.lock.Unlock()
+}
+
+// commitAck runs after a successful send: it enforces the outstanding-ack cap
+// (evicting the oldest live callbacks) and compacts ackOrder so stale ids left
+// by answered or evicted acks cannot accumulate without bound.
+func (h *socketHandler) commitAck() {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	evicted := 0
+	if len(h.acks) > maxOutstandingAcks {
+		// ackOrder holds every live id in insertion order, so scanning from
+		// the front evicts the oldest outstanding callbacks first (FIFO).
+		for _, id := range h.ackOrder {
+			if len(h.acks) <= maxOutstandingAcks {
+				break
+			}
+			if _, ok := h.acks[id]; ok {
+				delete(h.acks, id)
+				evicted++
+			}
+		}
+	}
+
+	// Compact when stale ids (already answered or evicted) dominate. This
+	// reaps entries anywhere in the slice, not just a contiguous prefix, so an
+	// early un-answered ack (out-of-order acking) cannot pin growth.
+	if len(h.ackOrder) > 2*len(h.acks)+16 {
+		kept := h.ackOrder[:0]
+		for _, id := range h.ackOrder {
+			if _, ok := h.acks[id]; ok {
+				kept = append(kept, id)
+			}
+		}
+		h.ackOrder = kept
+	}
+
+	if evicted > 0 {
+		// Under a sustained flood this would fire on nearly every send; rate
+		// limit so logging does not become its own amplification vector.
+		if now := time.Now(); now.Sub(h.lastAckEvictLog) > time.Second {
+			h.lastAckEvictLog = now
+			log.Printf("socketio: evicting outstanding acks (more than %d unanswered)", maxOutstandingAcks)
+		}
+	}
+}
+
+// takeAck removes and returns the ack callback for id, if present.
+func (h *socketHandler) takeAck(id int) (*caller, bool) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	c, ok := h.acks[id]
+	if ok {
+		delete(h.acks, id)
+	}
+	return c, ok
+}
+
+// clearAcks drops all pending ack callbacks. Called on socket teardown so the
+// read loop's exit releases any callbacks (and their captured state) still
+// waiting on responses that will never arrive.
+func (h *socketHandler) clearAcks() {
+	h.lock.Lock()
+	h.acks = make(map[int]*caller)
+	h.ackOrder = nil
+	h.lock.Unlock()
 }
 
 func newSocketHandler(s *socket, base *baseHandler) *socketHandler {
@@ -105,16 +207,9 @@ func (h *socketHandler) Emit(message string, args ...any) error {
 	args = append([]any{message}, args...)
 	if c != nil {
 		return h.socket.sendAck(args,
-			func(id int) {
-				h.lock.Lock()
-				h.acks[id] = c
-				h.lock.Unlock()
-			},
-			func(id int) {
-				h.lock.Lock()
-				delete(h.acks, id)
-				h.lock.Unlock()
-			},
+			func(id int) { h.registerAck(id, c) },
+			h.unregisterAck,
+			h.commitAck,
 		)
 	}
 	return h.socket.send(args)
@@ -242,12 +337,7 @@ func (h *socketHandler) onPacket(decoder *decoder, packet *packet) ([]any, error
 }
 
 func (h *socketHandler) onAck(id int, decoder *decoder, packet *packet) error {
-	h.lock.Lock()
-	c, ok := h.acks[id]
-	if ok {
-		delete(h.acks, id)
-	}
-	h.lock.Unlock()
+	c, ok := h.takeAck(id)
 	if !ok {
 		// No handler is waiting on this ack id; close the decoder so the
 		// read loop does not stall on an open frame.

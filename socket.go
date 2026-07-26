@@ -87,8 +87,9 @@ func (s *socket) sendConnect() error {
 // is allocated, the callback registered via register, and the frame written
 // while holding writeLock, so the callback is always registered before the
 // frame can be observed (and acked) by the peer. On write failure the
-// registration is rolled back via unregister.
-func (s *socket) sendAck(args []any, register func(id int), unregister func(id int)) error {
+// registration is rolled back via unregister. On success commit runs so the
+// caller can enforce any outstanding-ack bookkeeping (cap/compaction).
+func (s *socket) sendAck(args []any, register func(id int), unregister func(id int), commit func()) error {
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
 	id := s.id
@@ -108,12 +109,14 @@ func (s *socket) sendAck(args []any, register func(id int), unregister func(id i
 		unregister(id)
 		return err
 	}
+	commit()
 	return nil
 }
 
 func (s *socket) loop() error {
 	defer func() {
 		s.LeaveAll()
+		s.clearAcks()
 		p := packet{
 			Type: Disconnect,
 			ID:   -1,
