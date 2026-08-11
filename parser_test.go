@@ -28,6 +28,24 @@ func TestPacketType(t *testing.T) {
 	})
 }
 
+func TestDecodeRejectsInvalidPacketType(t *testing.T) {
+	for _, input := range []string{"/", "7", "9[]"} {
+		t.Run(input, func(t *testing.T) {
+			saver := &FrameSaver{
+				data: []FrameData{{
+					Buffer: bytes.NewBufferString(input),
+					Type:   engineio.MessageText,
+				}},
+			}
+
+			var p packet
+			if err := newDecoder(saver).Decode(&p); err == nil {
+				t.Fatalf("Decode(%q) error = nil, want invalid packet type error", input)
+			}
+		})
+	}
+}
+
 func TestParser(t *testing.T) {
 	p := packet{}
 	var decodeData any
