@@ -188,6 +188,9 @@ func (d *decoder) Decode(v *packet) error {
 	if err != nil {
 		return err
 	}
+	if t < '0' || t > '0'+byte(BinaryAck) {
+		return fmt.Errorf("invalid packet type %q", t)
+	}
 	v.Type = packetType(t - '0')
 
 	if v.Type == BinaryEvent || v.Type == BinaryAck {
