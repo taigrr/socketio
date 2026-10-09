@@ -337,6 +337,7 @@ func TestWebsocket(t *testing.T) {
 		defer c.Close()
 
 		<-sync
+		<-f.onClose
 		So(f.ClosedCount(), ShouldEqual, 1)
 		So(f.closeServer, ShouldEqual, s)
 	})
