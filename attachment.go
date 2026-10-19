@@ -47,6 +47,9 @@ func encodeAttachmentValue(v reflect.Value, index *int) []io.Reader {
 	if !v.IsValid() {
 		return ret
 	}
+	if !v.CanInterface() {
+		return ret
+	}
 	switch v.Kind() {
 	case reflect.Struct:
 		if v.Type().Name() == "Attachment" {
@@ -95,6 +98,9 @@ func decodeAttachmentValue(v reflect.Value, binary [][]byte) error {
 	v = reflect.Indirect(v)
 	if !v.IsValid() {
 		return fmt.Errorf("invalid value")
+	}
+	if !v.CanInterface() {
+		return nil
 	}
 	switch v.Kind() {
 	case reflect.Struct:

@@ -19,6 +19,11 @@ type HaveAttachment struct {
 	A *Attachment `json:"a"`
 }
 
+type HavePrivateAttachment struct {
+	A      *Attachment `json:"a"`
+	hidden any
+}
+
 func TestEncodeAttachments(t *testing.T) {
 	var input any
 	var target []io.Reader
@@ -103,6 +108,21 @@ func TestEncodeAttachments(t *testing.T) {
 		So(string(b), ShouldEqual, `{"test":{"i":0,"a":{"_placeholder":true,"num":0}}}`)
 	})
 
+	Convey("Unexported fields are ignored", t, func() {
+		hidden := &Attachment{Data: buf2}
+		hidden.num = -1
+		input = HavePrivateAttachment{
+			A:      attachment1,
+			hidden: hidden,
+		}
+		target = []io.Reader{buf1}
+
+		test()
+
+		So(attachment1.num, ShouldEqual, 0)
+		So(hidden.num, ShouldEqual, -1)
+	})
+
 }
 
 func TestDecodeAttachments(t *testing.T) {
@@ -181,5 +201,22 @@ func TestDecodeAttachments(t *testing.T) {
 		err := json.Unmarshal(b, &v)
 		So(err, ShouldBeNil)
 		So(v.A.num, ShouldEqual, 2)
+	})
+
+	Convey("Unexported fields are ignored", t, func() {
+		input = [][]byte{[]byte("data1"), []byte("data2")}
+		hidden := &Attachment{Data: buf2}
+		hidden.num = 1
+		attachment1 = &Attachment{Data: buf1}
+		attachment2 = nil
+		attachment1.num = 0
+		v = HavePrivateAttachment{
+			A:      attachment1,
+			hidden: hidden,
+		}
+
+		test()
+
+		So(buf2.String(), ShouldBeEmpty)
 	})
 }
