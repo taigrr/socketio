@@ -2,6 +2,8 @@ module github.com/taigrr/socketio
 
 go 1.27
 
+toolchain go1.27.2
+
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jessevdk/go-flags v1.6.1
