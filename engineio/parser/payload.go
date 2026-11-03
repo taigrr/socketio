@@ -158,12 +158,15 @@ func (d *PayloadDecoder) Next() (*PacketDecoder, error) {
 	}
 	lenByte := line[:l-1]
 	if isBinary {
-		for i, n := 0, l; i < n; i++ {
-			line[i] = line[i] + '0'
+		for i, digit := range lenByte {
+			if digit > 9 {
+				return nil, fmt.Errorf("invalid input")
+			}
+			lenByte[i] = digit + '0'
 		}
 	}
-	packetLen, err := strconv.ParseInt(string(lenByte), 10, 64)
-	if err != nil {
+	packetLen, err := strconv.ParseInt(string(lenByte), 10, strconv.IntSize)
+	if err != nil || packetLen <= 0 {
 		return nil, fmt.Errorf("invalid input")
 	}
 	return NewDecoder(newLimitReader(d.r, int(packetLen)))
