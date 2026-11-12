@@ -89,12 +89,17 @@ func (e *encoder) Encode(v packet) error {
 	return nil
 }
 
-func (e *encoder) encodePacket(v packet) error {
+func (e *encoder) encodePacket(v packet) (err error) {
 	writer, err := e.w.NextWriter(engineio.MessageText)
 	if err != nil {
 		return err
 	}
-	defer writer.Close()
+	defer func() {
+		// Closing commits the frame; report its failure unless writing already failed.
+		if closeErr := writer.Close(); err == nil {
+			err = closeErr
+		}
+	}()
 
 	w := newTrimWriter(writer, "\n")
 	wh := newWriterHelper(w)
@@ -118,7 +123,6 @@ func (e *encoder) encodePacket(v packet) error {
 	if v.Data != nil {
 		if needEnd {
 			wh.Write([]byte{','})
-			needEnd = false
 		}
 		if wh.Error() != nil {
 			return wh.Error()
@@ -129,12 +133,17 @@ func (e *encoder) encodePacket(v packet) error {
 	return wh.Error()
 }
 
-func (e *encoder) writeBinary(r io.Reader) error {
+func (e *encoder) writeBinary(r io.Reader) (err error) {
 	writer, err := e.w.NextWriter(engineio.MessageBinary)
 	if err != nil {
 		return err
 	}
-	defer writer.Close()
+	defer func() {
+		// Closing commits the frame; report its failure unless writing already failed.
+		if closeErr := writer.Close(); err == nil {
+			err = closeErr
+		}
+	}()
 
 	if _, err := io.Copy(writer, r); err != nil {
 		return err
