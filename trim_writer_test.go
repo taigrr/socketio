@@ -62,3 +62,21 @@ func TestTrimWriter(t *testing.T) {
 		})
 	})
 }
+
+func TestTrimWriterRetainsOwnedSuffix(t *testing.T) {
+	var output bytes.Buffer
+	writer := newTrimWriter(&output, " \n")
+	input := []byte("hello \n")
+	if _, err := writer.Write(input); err != nil {
+		t.Fatal(err)
+	}
+	// Writers must not retain the caller's slice: callers may reuse it as soon
+	// as Write returns, even when trailing bytes are buffered internally.
+	copy(input, "XXXXXXX")
+	if _, err := writer.Write([]byte("world\n")); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := output.String(), "hello \nworld"; got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+}
