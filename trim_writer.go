@@ -32,7 +32,8 @@ func (w *trimWriter) Write(p []byte) (int, error) {
 	if w.trimBuf != nil {
 		w.trimBuf = append(w.trimBuf, buf...)
 	} else {
-		w.trimBuf = buf
+		// Write callers may reuse p immediately, so retain an owned copy.
+		w.trimBuf = bytes.Clone(buf)
 	}
 	if len(p) == 0 {
 		return written, nil
